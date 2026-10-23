@@ -116,14 +116,15 @@ main { max-width: 680px; margin: 0 auto; }
 .banner button { flex: none; border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 7px 11px; font-weight: 600; font-size: 14px; }
 
 /* Cards */
-.row { position: relative; margin-bottom: 10px; border-radius: 16px; overflow: hidden; touch-action: pan-y;
+.row { position: relative; margin-bottom: 8px; border-radius: 14px; overflow: hidden; touch-action: pan-y;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .acts { position: absolute; top: 0; right: 0; bottom: 0; display: flex; visibility: hidden; }
 .row.open .acts, .row.swiping .acts { visibility: visible; }
 .acts button { width: 86px; border: 0; color: #fff; font-weight: 600; font-size: 15px; }
 .a-arch { background: var(--purple); }
 .a-del { background: var(--danger); }
-.card { position: relative; z-index: 1; background: var(--card); display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; box-shadow: var(--shadow); }
+.card { position: relative; z-index: 1; background: var(--card); display: flex; align-items: center; gap: 11px; height: 60px; padding: 5px 6px 5px 5px; border-radius: 14px; box-shadow: var(--shadow); cursor: pointer; }
+.card .poster { width: 33px; height: 50px; border-radius: 6px; font-size: 15px; }
 .card.snap { transition: transform .22s ease; }
 .row.dragging { z-index: 10; overflow: visible; }
 .row.dragging .acts { display: none; }
@@ -131,12 +132,16 @@ main { max-width: 680px; margin: 0 auto; }
 .poster { flex: none; width: 62px; height: 93px; border-radius: 9px; object-fit: cover; background: var(--chip); }
 .poster.ph { display: grid; place-items: center; font-weight: 700; font-size: 24px; color: var(--sub); }
 .info { flex: 1; min-width: 0; }
-.t { font-size: 16.5px; font-weight: 650; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.t { font-size: 16px; font-weight: 650; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub { font-size: 13.5px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+.sub .badge { font-size: 11.5px; padding: 1px 7px; }
+.svc { color: var(--text); font-weight: 500; }
+.svc img { width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 4px; }
 .yr { color: var(--sub); font-weight: 400; font-size: 14px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px; margin-top: 3px; font-size: 13px; color: var(--sub); }
 .meta .im b { background: #f5c518; color: #000; font-size: 10.5px; padding: 1px 4px; border-radius: 4px; margin-right: 3px; }
 .meta .rt { color: var(--text); }
-.st { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 4px 0 2px; margin-top: 2px; font-size: 14px; font-weight: 500; color: var(--text); }
+.st { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 2px 0 0; font-size: 13.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
 .st .behind { color: var(--accent); font-weight: 700; }
 .st .ok { color: var(--good); font-weight: 600; }
 .dim { color: var(--sub); }
@@ -146,9 +151,9 @@ main { max-width: 680px; margin: 0 auto; }
 .logos { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; align-items: center; }
 .logos img { width: 24px; height: 24px; border-radius: 6px; }
 .logos span { font-size: 12px; color: var(--sub); }
-.plus { flex: none; width: 54px; height: 54px; border: 0; border-radius: 15px; background: var(--accent); color: #fff; font-size: 18px; font-weight: 800; }
+.plus { flex: none; width: 50px; height: 50px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 800; }
 .plus:disabled { background: var(--chip); color: var(--sub); }
-.plus.txt { width: auto; min-width: 60px; padding: 0 12px; font-size: 14.5px; font-weight: 700; }
+.plus.txt { width: 72px; padding: 0; font-size: 14.5px; font-weight: 700; }
 .plus.txt.quiet { background: var(--chip); color: var(--text); }
 
 /* Tab bar */
@@ -231,6 +236,8 @@ body.welcome { padding-top: 0; }
 .mi-prov { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .mi-prov span { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .mi-prov img { width: 26px; height: 26px; border-radius: 6px; }
+.pglinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pglink { background: var(--chip); color: var(--text); text-decoration: none; border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 600; }
 .ep .n { flex: none; width: 46px; font-weight: 700; }
 .ep .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ep .d { flex: none; color: var(--sub); font-size: 13px; }
@@ -280,9 +287,9 @@ input[type=text], input[type=search] { width: 100%; font-size: 16px; padding: 11
 .inl { color: var(--good); font-size: 13px; font-weight: 700; flex: none; }
 
 /* Rank pages */
-.rrow .card { padding: 7px 8px 7px 10px; gap: 10px; }
+.rrow .card { padding: 5px 6px 5px 10px; gap: 10px; cursor: default; }
 .rnum { flex: none; min-width: 38px; height: 36px; border-radius: 10px; border: 0; background: var(--chip); font-weight: 700; font-size: 15px; }
-.rrow .poster { width: 34px; height: 51px; border-radius: 6px; font-size: 14px; }
+.rrow .poster { width: 33px; height: 50px; border-radius: 6px; font-size: 14px; }
 .rtt { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .handle { flex: none; width: 44px; height: 44px; display: grid; place-items: center; color: var(--sub); touch-action: none; }
 .handle svg { width: 22px; height: 22px; }
@@ -337,20 +344,30 @@ input[type=text], input[type=search] { width: 100%; font-size: 16px; padding: 11
    API KEYS — PASTE YOUR KEYS BETWEEN THE QUOTES BELOW
    TMDB: either the short "API Key" or the long "API Read Access Token" works.
    OMDb: the key from the OMDb email (click the activation link first).
+   MDBList (optional): gives Rotten Tomatoes scores for TV shows and the
+   audience Popcornmeter. If it's blank, ratings come from OMDb.
    These are the built-in keys everyone uses unless they paste their own
    in Settings → API keys.
    ===================================================================== */
 const TMDB_KEY = '71fcbfa47781a86392bc05f2738bc2c8';
 const OMDB_KEY = '1f15fc7f';
+const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.5.0';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
 const TMDB_LOGO = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg';
 const LS_DATA = 'watchlist.data.v1';
-const LS_CACHE = 'watchlist.cache.v1';
+const LS_CACHE = 'watchlist.cache.v2';
+try { localStorage.removeItem('watchlist.cache.v1'); } catch (e) { /* ignore */ }
+
+/* ---------- STREAMING SERVICE RULES (edit these lists to change what shows) ---------- */
+// Live-TV bundles never shown
+const LIVE_TV = /\b(fubo\w*|youtube ?tv|sling tv|direc ?tv\w*|philo|hulu (\+ )?live\w*|spectrum\w*|xfinity\w*|optimum\w*|fios\w*|frndly\w*|vidgo)\b/i;
+// Free / ad-supported services: shown only when the title is on no paid subscription
+const FREE_SVC = /\b(pluto|tubi|roku channel|freevee|plex|crackle|kanopy|hoopla|xumo|filmrise|popcornflix|shout! factory|fandango at home free|vudu free|fawesome|cineverse|sling freestream)\b/i;
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -384,7 +401,7 @@ function fmtRun(m) { if (!m) return ''; return m >= 60 ? `${Math.floor(m / 60)}h
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { problem('Reading saved data', e); return null; } }
 let D = load(LS_DATA);
 if (!D || typeof D !== 'object' || !Array.isArray(D.profiles)) D = { profiles: [], active: null, tab: 'shows', lastRefresh: 0 };
-D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', newAt: 'top' }, D.settings || {});
+D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', newAt: 'top', pg: false }, D.settings || {});
 let C = load(LS_CACHE);
 if (!C || typeof C !== 'object') C = {};
 
@@ -409,6 +426,8 @@ const findMovie = id => prof().movies.find(m => m.id === +id);
 const isPlaceholder = k => !k || /^PASTE_/.test(k.trim());
 const tmdbKey = () => (D.settings.tmdbKey || '').trim() || (isPlaceholder(TMDB_KEY) ? '' : TMDB_KEY.trim());
 const omdbKey = () => (D.settings.omdbKey || '').trim() || (isPlaceholder(OMDB_KEY) ? '' : OMDB_KEY.trim());
+const mdbKey = () => (D.settings.mdbKey || '').trim() || (isPlaceholder(MDBLIST_KEY) ? '' : MDBLIST_KEY.trim());
+const ratingsOn = () => !!(mdbKey() || omdbKey());
 
 /* ---------- API calls ---------- */
 class ApiError extends Error { constructor(msg, fatal) { super(msg); this.fatal = !!fatal; } }
@@ -449,6 +468,21 @@ async function omdb(imdbId) {
   return j;
 }
 
+async function mdblist(type, id) {
+  const key = mdbKey(); if (!key) return null;
+  const u = `https://api.mdblist.com/tmdb/${type === 'tv' ? 'show' : 'movie'}/${id}?apikey=${encodeURIComponent(key)}`;
+  let res;
+  try { res = await fetch(u); } catch (e) { throw new ApiError('Could not reach MDBList (ratings).'); }
+  if (res.status === 401 || res.status === 403) throw new ApiError('MDBList says the key is invalid. Double-check it in Settings → API keys.', true);
+  if (res.status === 429) throw new ApiError('MDBList daily limit reached. Ratings will update tomorrow.', true);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new ApiError('MDBList error ' + res.status);
+  const j = await res.json();
+  if (!j || !Array.isArray(j.ratings)) return null;
+  const val = src => { const r = j.ratings.find(x => String(x.source).toLowerCase() === src); return r && r.value != null && r.value !== '' ? r.value : null; };
+  return { tomatoes: val('tomatoes'), popcorn: val('popcorn'), imdb: val('imdb') };
+}
+
 async function pool(items, n, fn, label) {
   let i = 0, fatal = null;
   const worker = async () => {
@@ -462,17 +496,53 @@ async function pool(items, n, fn, label) {
   if (fatal) throw fatal;
 }
 
-function provs(wp) {
+/* Raw TMDB/JustWatch lists are cached; the rules below run every time, so rule changes apply at once */
+function rawProv(wp) {
   const us = wp && wp.results && wp.results[REGION];
-  if (!us) return [];
-  const all = [...(us.flatrate || []), ...(us.free || []), ...(us.ads || [])]
-    .sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99));
-  const seen = new Set(); let out = [];
-  for (const p of all) { if (seen.has(p.provider_id)) continue; seen.add(p.provider_id); out.push({ n: p.provider_name, l: p.logo_path }); }
-  const names = new Set(out.map(p => p.n.toLowerCase()));
-  out = out.filter(p => { const m = p.n.match(/^(.*?)\s+(?:standard\s+|basic\s+)?with ads$/i); return !(m && names.has(m[1].toLowerCase())); });
-  const main = out.filter(p => !/\b(amazon|apple tv|roku premium) channel$/i.test(p.n));
-  return main.length ? main : out;
+  const pick = list => (list || []).map(p => ({ id: p.provider_id, n: p.provider_name, l: p.logo_path, p: p.display_priority ?? 99 }));
+  return us ? { sub: pick(us.flatrate), free: [...pick(us.free), ...pick(us.ads)] } : { sub: [], free: [] };
+}
+const isChannel = n => /\b(amazon|apple tv|roku premium) channel\b/i.test(n);
+function brandOf(n) {
+  let b = n.toLowerCase().replace(/\+/g, ' plus ')
+    .replace(/\b(amazon|apple tv|roku premium) channel\b/g, ' ')
+    .replace(/\b(premium plus|premium|essential|with showtime|standard with ads|basic with ads|with ads|ad-free|ad free|no ads|ultimate|basic|standard)\b/g, ' ')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (b === 'hbo max') b = 'max';
+  return b;
+}
+function tierOf(n) {
+  const x = n.toLowerCase().replace(/\+/g, ' plus ');
+  let t = /with ads|essential|\bbasic\b/.test(x) ? 0 : /premium plus|ultimate|with showtime/.test(x) ? 3 : /premium|ad-free|ad free|no ads/.test(x) ? 2 : 1;
+  if (isChannel(n)) t += 10; // prefer the service's own app over an Amazon/Apple channel
+  return t;
+}
+function cheapestPerBrand(list) {
+  const best = new Map();
+  for (const p of list) {
+    const b = brandOf(p.n), cur = best.get(b);
+    if (!cur || tierOf(p.n) < tierOf(cur.n) || (tierOf(p.n) === tierOf(cur.n) && p.p < cur.p)) best.set(b, p);
+  }
+  return [...best.values()].sort((a, b) => a.p - b.p);
+}
+/* Plain service name: "Peacock Premium Plus" -> "Peacock", "Paramount Plus Essential" -> "Paramount+" */
+function shortName(n) {
+  let x = String(n || '')
+    .replace(/\s+(amazon|apple tv|roku premium) channel\s*$/i, '')
+    .replace(/\s+(premium plus|premium|essential|with showtime|standard with ads|basic with ads|with ads|ad-free|ad free|no ads|ultimate)\s*$/i, '')
+    .replace(/\s+(premium|essential)\s*$/i, '')
+    .trim();
+  x = x.replace(/\s+Plus$/i, '+').replace(/^Amazon Prime Video$/i, 'Prime Video').replace(/^Tubi TV$/i, 'Tubi');
+  return x || n;
+}
+function provs(pv) {
+  if (!pv) return [];
+  const all = [...(pv.sub || []).map(p => Object.assign({ free: FREE_SVC.test(p.n) }, p)), ...(pv.free || []).map(p => Object.assign({}, p, { free: true }))]
+    .filter(p => !LIVE_TV.test(p.n));
+  const paid = all.filter(p => !p.free);
+  const seen = new Set();
+  return cheapestPerBrand(paid.length ? paid : all).map(p => ({ n: shortName(p.n), l: p.l }))
+    .filter(p => !seen.has(p.n.toLowerCase()) && seen.add(p.n.toLowerCase()));
 }
 
 async function fetchTV(id, full) {
@@ -482,7 +552,7 @@ async function fetchTV(id, full) {
     type: 'tv', id, title: d.name, year: (d.first_air_date || '').slice(0, 4), poster: d.poster_path || null,
     status: d.status || '', imdb: (d.external_ids && d.external_ids.imdb_id) || null,
     runtime: (d.episode_run_time && d.episode_run_time[0]) || (d.last_episode_to_air && d.last_episode_to_air.runtime) || (prev && prev.runtime) || null,
-    providers: provs(d['watch/providers']),
+    pv: rawProv(d['watch/providers']),
     next: d.next_episode_to_air ? { s: d.next_episode_to_air.season_number, e: d.next_episode_to_air.episode_number, date: d.next_episode_to_air.air_date || '' } : null,
     seasons: Object.assign({}, prev && prev.seasons), detailsAt: today(),
     ratings: prev ? prev.ratings : null, ratingsAt: prev ? prev.ratingsAt : null
@@ -506,6 +576,7 @@ async function fetchTV(id, full) {
       if (sd && Array.isArray(sd.episodes)) e.seasons[n] = { count: sd.episodes.length, eps: sd.episodes.map(ep => [ep.episode_number, ep.air_date || '', ep.name || '']) };
     }
   }
+  e.providers = provs(e.pv);
   C[key] = e;
   return e;
 }
@@ -531,22 +602,35 @@ async function fetchMovie(id) {
   const dt = usDates(d.release_dates);
   C[key] = {
     type: 'movie', id, title: d.title, year: (d.release_date || '').slice(0, 4), poster: d.poster_path || null,
-    runtime: d.runtime || null, imdb: d.imdb_id || null, providers: provs(d['watch/providers']),
+    runtime: d.runtime || null, imdb: d.imdb_id || null, pv: rawProv(d['watch/providers']),
     release: d.release_date || '', th: dt.th, dig: dt.dig, detailsAt: today(),
     ratings: prev ? prev.ratings : null, ratingsAt: prev ? prev.ratingsAt : null
   };
+  C[key].providers = provs(C[key].pv);
   return C[key];
 }
 
 async function fetchRatings(key) {
-  const e = C[key]; if (!e || !e.imdb) return;
-  const j = await omdb(e.imdb);
-  if (j === null && !omdbKey()) return;
-  const rt = j && Array.isArray(j.Ratings) ? (j.Ratings.find(r => r.Source === 'Rotten Tomatoes') || {}).Value : null;
-  const im = j && j.imdbRating && j.imdbRating !== 'N/A' ? j.imdbRating : null;
-  e.ratings = { rt: rt || null, imdb: im };
+  const e = C[key]; if (!e) return;
+  let r = null;
+  if (mdbKey()) {
+    try {
+      const m = await mdblist(e.type, e.id);
+      if (m && (m.tomatoes != null || m.imdb != null || m.popcorn != null))
+        r = { rt: m.tomatoes != null ? m.tomatoes + '%' : null, pop: m.popcorn != null ? m.popcorn + '%' : null, imdb: m.imdb != null ? String(m.imdb) : null, src: 'mdb' };
+    } catch (err) { if (err.fatal || !omdbKey()) throw err; problem('MDBList', err); }
+  }
+  if (!r && omdbKey() && e.imdb) {
+    const j = await omdb(e.imdb);
+    const rt = j && Array.isArray(j.Ratings) ? (j.Ratings.find(x => x.Source === 'Rotten Tomatoes') || {}).Value : null;
+    const im = j && j.imdbRating && j.imdbRating !== 'N/A' ? j.imdbRating : null;
+    r = { rt: rt || null, pop: null, imdb: im, src: 'omdb' };
+  }
+  if (!r) r = { rt: null, pop: null, imdb: null, src: mdbKey() ? 'mdb' : 'omdb' };
+  e.ratings = r;
   e.ratingsAt = today();
 }
+const ratingsStale = (c, t, force) => !c.ratingsAt || daysBetween(c.ratingsAt, t) >= (force ? 1 : 7) || (mdbKey() && !(c.ratings && c.ratings.src === 'mdb'));
 
 const keyTitle = k => { const c = C[k]; if (c) return c.title; const [type, id] = k.split(':'); const p = prof(); const x = p && (type === 'tv' ? p.shows : p.movies).find(i => i.id === +id); return x ? x.title : k; };
 
@@ -569,9 +653,8 @@ async function refresh(opts = {}) {
       const [type, id] = k.split(':');
       if (type === 'tv') await fetchTV(+id, force); else await fetchMovie(+id);
     }, k => `Updating "${keyTitle(k)}"`);
-    if (omdbKey()) {
-      const rjobs = keys.filter(k => !seenMovie.has(k) && C[k] && C[k].imdb &&
-        (!C[k].ratingsAt || daysBetween(C[k].ratingsAt, t) >= (force ? 1 : 7)));
+    if (ratingsOn()) {
+      const rjobs = keys.filter(k => !seenMovie.has(k) && C[k] && ratingsStale(C[k], t, force));
       await pool(rjobs, 3, fetchRatings, k => `Ratings for "${keyTitle(k)}"`);
     }
     D.lastRefresh = Date.now();
@@ -653,9 +736,7 @@ function showState(s) {
     if (behindEps.length) parts.push(`<span class="behind">${behindEps.length} behind</span>`);
     if (newSp.length) parts.push(`<span class="behind">${newSp.length} new special${newSp.length > 1 ? 's' : ''}</span>`);
     html = `${posL} · ${parts.join(' · ')}`;
-  } else if (!p && !anyAired) html = `Not started · ${nextDate ? 'Premieres ' + fmtDate(nextDate) : 'Date TBA'}`;
-  else if (nextDate) html = `${posL} · ${ok} · Next ep ${fmtDate(nextDate)}`;
-  else if (!ended) html = `${posL} · ${ok} · Returning, date TBA`;
+  } else if (!p && !anyAired) html = `Not started · <span class="dim">Not aired yet</span>`;
   else html = `${posL} · ${ok}`;
   const endedTag = ended && upToDate && !!p;
   if (endedTag) html += '<span class="tag end">Ended</span>';
@@ -667,16 +748,12 @@ function movieState(m) {
   const c = C['movie:' + m.id];
   if (!c) return { sec: 'not', html: '<span class="dim">Loading…</span>' };
   if (m.seen) return { sec: 'seen', html: `<span class="dim">Seen${m.seenOn ? ' ' + fmtDate(m.seenOn, false) : ''}</span>` };
-  if (m.newly) return { sec: 'new', html: `<span class="badge">Now on ${esc(m.newly.name)}</span>` };
-  if (c.providers.length) {
-    const names = c.providers.slice(0, 2).map(p => esc(p.n)).join(', ') + (c.providers.length > 2 ? ` +${c.providers.length - 2}` : '');
-    return { sec: 'now', html: `<span class="ok">Streaming</span> <span class="dim">on ${names}</span>` };
-  }
-  const t = today(), parts = [];
-  if (c.th && (c.th > t || daysBetween(c.th, t) <= 120)) parts.push(c.th > t ? `In theaters ${fmtDate(c.th)}` : `In theaters since ${fmtDate(c.th, false)}`);
-  if (c.dig) parts.push(c.dig > t ? `Digital ${fmtDate(c.dig)}` : (daysBetween(c.dig, t) <= 365 ? `Rent/buy since ${fmtDate(c.dig, false)}` : 'Rent/buy only'));
-  if (!parts.length) parts.push(c.release && c.release > t ? `Releases ${fmtDate(c.release)}` : 'Not on a streaming service');
-  return { sec: 'not', html: `<span class="dim">${parts.join(' · ')}</span>` };
+  if (m.newly) return { sec: 'new', html: `<span class="badge">Now on ${esc(shortName(m.newly.name))}</span>` };
+  if (c.providers.length) { const pr = c.providers[0]; return { sec: 'now', html: `<span class="svc">${pr.l ? `<img src="${IMG}w92${esc(pr.l)}" alt="" draggable="false">` : ''}${esc(pr.n)}</span>` }; }
+  const t = today();
+  // only upcoming dates on the card; past dates live in the details sheet
+  const up = c.th && c.th > t ? `Theaters ${fmtDate(c.th, false)}` : c.dig && c.dig > t ? `Digital ${fmtDate(c.dig, false)}` : c.release && c.release > t ? `Out ${fmtDate(c.release, false)}` : '';
+  return { sec: 'not', html: up ? `<span class="dim">${up}</span>` : '' };
 }
 
 /* ---------- card HTML ---------- */
@@ -700,34 +777,29 @@ function logosHtml(c) {
 function showCard(s, mode) {
   const c = C['tv:' + s.id], st = showState(s);
   const title = (c && c.title) || s.title, year = (c && c.year) || s.year;
-  const run = c && c.runtime ? `<span>${fmtRun(c.runtime)}/ep</span>` : '';
   const acts = mode === 'arch' ? `<button class="a-del" data-act="delShow" data-id="${s.id}">Delete</button>`
     : `<button class="a-arch" data-act="archShow" data-id="${s.id}">Archive</button><button class="a-del" data-act="delShow" data-id="${s.id}">Delete</button>`;
   const right = mode === 'arch' ? `<button class="plus txt quiet" data-act="unarchShow" data-id="${s.id}">Restore</button>`
     : `<button class="plus" data-act="plus1" data-id="${s.id}" ${st.canPlus ? '' : 'disabled'} aria-label="Watched next episode">+1</button>`;
-  return `<div class="row" data-id="${s.id}"><div class="acts">${acts}</div><div class="card">
-    ${posterHtml((c && c.poster) || s.poster, title)}
+  return `<div class="row" data-id="${s.id}"><div class="acts">${acts}</div><div class="card" data-act="showInfo" data-id="${s.id}">
+    ${posterHtml((c && c.poster) || s.poster, title, 'w92')}
     <div class="info">
       <div class="t">${esc(title)}${year ? ` <span class="yr">${esc(year)}</span>` : ''}</div>
-      <div class="meta">${run}${ratingsHtml(c)}<button class="infob" data-act="showInfo" data-id="${s.id}" aria-label="Show details"><span>i</span></button></div>
       <button class="st" data-act="picker" data-id="${s.id}">${st.html}</button>
-      ${logosHtml(c)}
     </div>${right}</div></div>`;
 }
 
 function movieCard(m) {
   const c = C['movie:' + m.id], st = movieState(m);
   const title = (c && c.title) || m.title, year = (c && c.year) || m.year;
-  const run = c && c.runtime ? `<span>${fmtRun(c.runtime)}</span>` : '';
+  const line = [c && c.runtime ? fmtRun(c.runtime) : '', st.html].filter(Boolean).join(' · ');
   const right = m.seen ? `<button class="plus txt quiet" data-act="unseen" data-id="${m.id}">Restore</button>`
     : `<button class="plus txt" data-act="seen" data-id="${m.id}">Seen</button>`;
-  return `<div class="row" data-id="${m.id}"><div class="acts"><button class="a-del" data-act="delMovie" data-id="${m.id}">Delete</button></div><div class="card">
-    ${posterHtml((c && c.poster) || m.poster, title)}
+  return `<div class="row" data-id="${m.id}"><div class="acts"><button class="a-del" data-act="delMovie" data-id="${m.id}">Delete</button></div><div class="card" data-act="movieInfo" data-id="${m.id}">
+    ${posterHtml((c && c.poster) || m.poster, title, 'w92')}
     <div class="info">
       <div class="t">${esc(title)}${year ? ` <span class="yr">${esc(year)}</span>` : ''}</div>
-      <div class="meta">${run}${ratingsHtml(c)}<button class="infob" data-act="movieInfo" data-id="${m.id}" aria-label="Movie details"><span>i</span></button></div>
-      <div class="st">${st.html}</div>
-      ${m.seen ? '' : logosHtml(c)}
+      <div class="sub">${line || '&nbsp;'}</div>
     </div>${right}</div></div>`;
 }
 
@@ -1035,11 +1107,37 @@ async function openInfo(type, id) {
   infoSheet = { k, sh };
   if (!MI[k]) {
     try {
-      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings' })
+      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings,external_ids' })
         : await tmdb(`/movie/${id}`, { append_to_response: 'credits,release_dates' });
     } catch (e) { problem(type === 'tv' ? 'Show details' : 'Movie details', e); if (infoSheet && infoSheet.sh === sh) closeSheet(); return; }
   }
   if (infoSheet && infoSheet.sh === sh) sh.el.innerHTML = type === 'tv' ? showInfoHtml(MI[k]) : movieInfoHtml(MI[k]);
+}
+const rateHtml = r => (r.rt ? `<span>🍅 ${esc(r.rt)}</span>` : '') + (r.pop ? `<span>🍿 ${esc(r.pop)}</span>` : '') + (r.imdb ? `<span class="im"><b>IMDb</b>${esc(r.imdb)}</span>` : '');
+const CERT_MEANING = {
+  'G': 'General audiences. All ages admitted.',
+  'PG': 'Parental guidance suggested. Some material may not be suitable for children.',
+  'PG-13': 'Parents strongly cautioned. Some material may be inappropriate for children under 13.',
+  'R': 'Restricted. Under 17 requires an accompanying parent or adult guardian.',
+  'NC-17': 'Adults only. No one 17 and under admitted.',
+  'NR': 'Not rated.',
+  'TV-Y': 'Designed to be appropriate for all children.',
+  'TV-Y7': 'Designed for children age 7 and older.',
+  'TV-Y7-FV': 'For children age 7 and older; contains fantasy violence.',
+  'TV-G': 'General audience. Suitable for all ages.',
+  'TV-PG': 'Parental guidance suggested. May contain material unsuitable for younger children.',
+  'TV-14': 'Parents strongly cautioned. May be unsuitable for children under 14.',
+  'TV-MA': 'Mature audiences only. May be unsuitable for children under 17.'
+};
+function parentsGuideHtml(cert, descriptors, imdb, title) {
+  if (!D.settings.pg) return '';
+  const meaning = CERT_MEANING[cert] || (cert ? '' : 'No US rating listed.');
+  const desc = (descriptors || []).filter(Boolean);
+  const links = [imdb ? `<a class="pglink" href="https://www.imdb.com/title/${encodeURIComponent(imdb)}/parentalguide" target="_blank" rel="noopener">IMDb Parents Guide ›</a>` : '',
+    `<a class="pglink" href="https://www.commonsensemedia.org/search/${encodeURIComponent(title)}" target="_blank" rel="noopener">Common Sense Media ›</a>`].join('');
+  return `<div class="mi-h">Parents guide</div><div class="mi-line">${cert ? `<span class="cert">${esc(cert)}</span> ` : ''}${esc(meaning)}</div>
+    ${desc.length ? `<div class="mi-line dim" style="margin-top:4px">Content: ${esc(desc.join(', '))}</div>` : ''}
+    <div class="pglinks">${links}</div>`;
 }
 const castHtml = list => list.length ? `<div class="mi-h">Top billed cast</div><div class="cast">${list.map(p => `<div>${p.img ? `<img src="${IMG}w185${esc(p.img)}" alt="" loading="lazy">` : '<span class="noimg"></span>'}<b>${esc(p.name)}</b><small>${esc(p.role || '')}${p.eps ? `<br>${esc(p.eps)}` : ''}</small></div>`).join('')}</div>` : '';
 const provHtml = prov => `<div class="mi-h">Streaming</div>` + (prov.length ? `<div class="mi-prov">${prov.map(p => `<span>${p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</div>` : '<div class="mi-line dim">Not on a subscription or free service right now</div>');
@@ -1047,6 +1145,7 @@ function showInfoHtml(d) {
   const c = C['tv:' + d.id] || {};
   const cr = ((d.content_ratings && d.content_ratings.results) || []).find(r => r.iso_3166_1 === REGION);
   const cert = cr ? cr.rating : '';
+  const tvDesc = cr && Array.isArray(cr.descriptors) ? cr.descriptors : [];
   const y1 = (d.first_air_date || '').slice(0, 4), y2 = (d.last_air_date || '').slice(0, 4);
   const ended = /^(ended|canceled|cancelled)$/i.test(d.status || '');
   const years = !y1 ? '' : ended ? (y2 && y2 !== y1 ? `${y1}–${y2}` : y1) : `${y1}–`;
@@ -1056,8 +1155,7 @@ function showInfoHtml(d) {
   const facts = [years, cert ? `<span class="cert">${esc(cert)}</span>` : '', run ? fmtRun(run) + '/ep' : ''].filter(Boolean).join(' · ');
   const genres = (d.genres || []).map(g => g.name).join(', ');
   const nets = (d.networks || []).map(n => n.name);
-  const r = c.ratings || {};
-  const rate = (r.rt ? `<span>🍅 ${esc(r.rt)}</span>` : '') + (r.imdb ? `<span class="im"><b>IMDb</b>${esc(r.imdb)}</span>` : '');
+  const rate = rateHtml(c.ratings || {});
   const creators = (d.created_by || []).map(p => p.name);
   const cast = ((d.aggregate_credits && d.aggregate_credits.cast) || []).slice(0, 10).map(p => {
     const role = (p.roles || []).slice().sort((a, b) => (b.episode_count || 0) - (a.episode_count || 0))[0];
@@ -1075,13 +1173,16 @@ function showInfoHtml(d) {
     ${nets.length ? `<div class="mi-h">Network</div><div class="mi-line">${esc(nets.join(', '))}</div>` : ''}
     ${creators.length ? `<div class="mi-h">Created by</div><div class="mi-line">${esc(creators.join(', '))}</div>` : ''}
     ${castHtml(cast)}
-    ${provHtml(c.providers || [])}`;
+    ${provHtml(c.providers || [])}
+    ${parentsGuideHtml(cert, tvDesc, (d.external_ids && d.external_ids.imdb_id) || c.imdb, d.name)}`;
 }
 function movieInfoHtml(d) {
   const c = C['movie:' + d.id] || {};
   const us = ((d.release_dates && d.release_dates.results) || []).find(r => r.iso_3166_1 === REGION);
   const certs = us ? us.release_dates.filter(r => r.certification) : [];
-  const cert = (certs.find(r => r.type === 3) || certs[0] || {}).certification || '';
+  const certRow = certs.find(r => r.type === 3) || certs[0] || {};
+  const cert = certRow.certification || '';
+  const mDesc = [...new Set(certs.flatMap(r => Array.isArray(r.descriptors) ? r.descriptors : []))];
   const year = (d.release_date || '').slice(0, 4);
   const genres = (d.genres || []).map(g => g.name).join(', ');
   const crew = (d.credits && d.credits.crew) || [];
@@ -1089,8 +1190,7 @@ function movieInfoHtml(d) {
   const writers = [...new Set(crew.filter(p => p.department === 'Writing').map(p => p.name))].slice(0, 3);
   const cast = ((d.credits && d.credits.cast) || []).slice(0, 10);
   const facts = [year, cert ? `<span class="cert">${esc(cert)}</span>` : '', fmtRun(d.runtime)].filter(Boolean).join(' · ');
-  const r = c.ratings || {};
-  const rate = (r.rt ? `<span>🍅 ${esc(r.rt)}</span>` : '') + (r.imdb ? `<span class="im"><b>IMDb</b>${esc(r.imdb)}</span>` : '');
+  const rate = rateHtml(c.ratings || {});
   const dt = usDates(d.release_dates), t = today();
   const rel = [dt.th ? `Theaters ${fmtDate(dt.th, false)}` : (d.release_date ? `Released ${fmtDate(d.release_date, false)}` : ''), dt.dig ? `Digital ${fmtDate(dt.dig, false)}` : ''].filter(Boolean).join(' · ');
   const prov = (c.providers || []);
@@ -1102,7 +1202,8 @@ function movieInfoHtml(d) {
     ${writers.length ? `<div class="mi-h">Writers</div><div class="mi-line">${esc(writers.join(', '))}</div>` : ''}
     ${castHtml(cast.map(p => ({ name: p.name, img: p.profile_path, role: p.character })))}
     ${rel ? `<div class="mi-h">Release</div><div class="mi-line">${rel}</div>` : ''}
-    ${provHtml(prov)}`;
+    ${provHtml(prov)}
+    ${parentsGuideHtml(cert, mDesc, d.imdb_id || c.imdb, d.title)}`;
 }
 
 /* ---------- search / add ---------- */
@@ -1150,14 +1251,14 @@ async function addResult(r) {
     const key = (tv ? 'tv:' : 'movie:') + item.id;
     if (!tv) { item.streaming = C[key].providers.length > 0; }
     saveCache(); save(); render(); renderPicker();
-    if (omdbKey()) { try { await fetchRatings(key); saveCache(); render(); } catch (e) { problem('Ratings', e); } }
+    if (ratingsOn()) { try { await fetchRatings(key); saveCache(); render(); } catch (e) { problem('Ratings', e); } }
   } catch (e) { problem(`Adding "${item.title}"`, e); if (picker && picker.id === item.id) closeSheet(); render(); }
 }
 
 /* ---------- settings ---------- */
 function settingsHtml() {
   const p = prof(), w = +D.settings.win;
-  const builtT = !isPlaceholder(TMDB_KEY), builtO = !isPlaceholder(OMDB_KEY);
+  const builtT = !isPlaceholder(TMDB_KEY), builtO = !isPlaceholder(OMDB_KEY), builtM = !isPlaceholder(MDBLIST_KEY);
   const last = D.lastRefresh ? new Date(D.lastRefresh).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'never';
   return `
   <h3>Profiles</h3><div class="group">
@@ -1175,9 +1276,13 @@ function settingsHtml() {
   <div class="seg">${[['top', 'Top of the ranking'], ['bottom', 'Bottom']].map(([v, l]) => `<button class="${(D.settings.newAt || 'top') === v ? 'on' : ''}" data-act="newAt" data-v="${v}">${l}</button>`).join('')}</div>
   <h3>Keep caught-up shows on top when the next episode is within</h3>
   <div class="seg">${[[7, '1 week'], [14, '2 weeks'], [30, '1 month'], [0, 'Off']].map(([v, l]) => `<button class="${w === v ? 'on' : ''}" data-act="win" data-v="${v}">${l}</button>`).join('')}</div>
+  <h3>Details pages</h3>
+  <div class="seg">${[[true, 'Parents guide on'], [false, 'Off']].map(([v, l]) => `<button class="${!!D.settings.pg === v ? 'on' : ''}" data-act="pg" data-v="${v ? 1 : 0}">${l}</button>`).join('')}</div>
+  <p class="note">Adds the age rating, what it means, and links to IMDb's and Common Sense Media's parents guides at the bottom of each details page.</p>
   <h3>API keys</h3><div class="group pad">
     <label class="fld">TMDB key<input type="text" id="kT" value="${esc(D.settings.tmdbKey)}" placeholder="${builtT ? 'Using the built-in key' : 'Not set'}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
     <label class="fld">OMDb key<input type="text" id="kO" value="${esc(D.settings.omdbKey)}" placeholder="${builtO ? 'Using the built-in key' : 'Not set'}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="fld">MDBList key (better Rotten Tomatoes coverage)<input type="text" id="kM" value="${esc(D.settings.mdbKey)}" placeholder="${builtM ? 'Using the built-in key' : 'Not set'}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
     <button class="btn sm" data-act="saveKeys">Save keys</button></div>
   <p class="note">Optional. Leave blank to use the keys built into the app, or paste your own free keys to use those instead.</p>
   <h3>Data</h3><div class="group"><button class="gi" data-act="forceRefresh">Refresh everything now<span class="chev">›</span></button></div>
@@ -1187,7 +1292,7 @@ function settingsHtml() {
     <a href="https://www.themoviedb.org" target="_blank" rel="noopener"><img src="${TMDB_LOGO}" alt="TMDB" onerror="this.style.display='none'"></a>
     <p>This app uses the TMDB API but is not endorsed or certified by TMDB.</p>
     <p>Streaming availability provided by JustWatch.</p>
-    <p>Ratings via OMDb.</p>
+    <p>Ratings via OMDb and MDBList.</p>
     <p>Watchlist v${APP_VERSION}</p>
   </div>`;
 }
@@ -1392,10 +1497,11 @@ const ACT = {
   impNew() { if (pendingImport) importAsNew(pendingImport); pendingImport = null; },
   impReplace() { if (!pendingImport) return; const p = prof(); p.shows = pendingImport.shows; p.movies = pendingImport.movies; pendingImport = null; finishImport(`Replaced “${p.name}” from backup`); },
 
+  pg(b) { D.settings.pg = b.dataset.v === '1'; save(); rerenderSettings(); },
   newAt(b) { D.settings.newAt = b.dataset.v; save(); rerenderSettings(); },
   win(b) { D.settings.win = +b.dataset.v; save(); render(); rerenderSettings(); },
   saveKeys() {
-    D.settings.tmdbKey = ($('#kT').value || '').trim(); D.settings.omdbKey = ($('#kO').value || '').trim(); save();
+    D.settings.tmdbKey = ($('#kT').value || '').trim(); D.settings.omdbKey = ($('#kO').value || '').trim(); D.settings.mdbKey = ($('#kM').value || '').trim(); save();
     document.activeElement && document.activeElement.blur(); rerenderSettings(); render(); toast('Keys saved'); refresh({ force: true });
   },
   rank(b) { openRank(b.dataset.kind); },
@@ -1431,6 +1537,7 @@ document.addEventListener('visibilitychange', () => {
 
 (function init() {
   try {
+    for (const e of Object.values(C)) if (e && e.pv) e.providers = provs(e.pv);
     for (const p of D.profiles) { p.shows = p.shows || []; p.movies = p.movies || []; normalizeRanks(p.shows); normalizeRanks(p.movies); }
     if (D.tab !== 'movies') D.tab = 'shows';
     if (D.profiles.length && D.tab === 'movies') moviesShown(true);
