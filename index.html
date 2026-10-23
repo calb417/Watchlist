@@ -137,6 +137,13 @@ main { max-width: 680px; margin: 0 auto; }
 .sub .badge { font-size: 11.5px; padding: 1px 7px; }
 .svc { color: var(--text); font-weight: 500; }
 .scores { color: var(--text); }
+.imdbs { background: #f5c518; color: #000; font-size: 10px; font-weight: 700; padding: 0 3px; border-radius: 3px; vertical-align: 1px; }
+.card.noposter { padding-left: 14px; }
+.sw { flex: none; position: relative; width: 46px; height: 28px; border-radius: 14px; background: var(--chip); transition: background .15s; }
+.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s; }
+.sw.on { background: var(--good); }
+.sw.on::after { transform: translateX(18px); }
+.gi .sl { flex: 1; min-width: 0; }
 .svc img { width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 4px; }
 .yr { color: var(--sub); font-weight: 400; font-size: 14px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px; margin-top: 3px; font-size: 13px; color: var(--sub); }
@@ -355,7 +362,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.1';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -403,6 +410,18 @@ function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e)
 let D = load(LS_DATA);
 if (!D || typeof D !== 'object' || !Array.isArray(D.profiles)) D = { profiles: [], active: null, tab: 'shows', lastRefresh: 0 };
 D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false }, D.settings || {});
+/* What each list's cards show (Settings → List view). Third value = default. */
+const VIEW_OPTS = {
+  tv: [['poster', 'Poster', 1], ['year', 'Year', 1], ['rt', 'Rotten Tomatoes 🍅', 0], ['pop', 'Popcornmeter 🍿', 0], ['imdb', 'IMDb rating', 0],
+    ['runtime', 'Runtime per episode', 0], ['service', 'Streaming service', 0], ['next', 'Next episode date', 0], ['ended', '“Ended” tag', 1]],
+  movie: [['poster', 'Poster', 1], ['year', 'Year', 1], ['runtime', 'Runtime', 1], ['rt', 'Rotten Tomatoes 🍅', 1], ['pop', 'Popcornmeter 🍿', 1],
+    ['imdb', 'IMDb rating', 0], ['service', 'Streaming service', 0], ['upcoming', 'Upcoming release date', 1]]
+};
+D.settings.view = D.settings.view || {};
+for (const kind of ['tv', 'movie']) { const v = D.settings.view[kind] = D.settings.view[kind] || {}; for (const [k, , def] of VIEW_OPTS[kind]) if (typeof v[k] !== 'boolean') v[k] = !!def; }
+// 1.7.1: TV scores default to off (1.7.0 briefly had TV Rotten Tomatoes on)
+if (D.settings.viewVer !== 2) { D.settings.view.tv.rt = false; D.settings.viewVer = 2; }
+const V = (kind, k) => !!D.settings.view[kind][k];
 let C = load(LS_CACHE);
 if (!C || typeof C !== 'object') C = {};
 
@@ -888,9 +907,8 @@ function showState(s) {
   } else if (!p && !anyAired) html = `Not started · <span class="dim">Not aired yet</span>`;
   else html = `${posL} · ${ok}`;
   const endedTag = ended && upToDate && !!p;
-  if (endedTag) html += '<span class="tag end">Ended</span>';
   const newSinceArch = !!(s.arch && s.archOn && (behindEps.some(x => x.d > s.archOn) || newSp.some(ep => ep[1] > s.archOn)));
-  return { loaded: true, section, html, endedTag, canPlus: behindEps.length > 0, nextEp: behindEps[0] || null, newSinceArch };
+  return { loaded: true, section, html, endedTag, upToDate, nextDate, canPlus: behindEps.length > 0, nextEp: behindEps[0] || null, newSinceArch };
 }
 
 function movieState(m) {
@@ -898,11 +916,11 @@ function movieState(m) {
   if (!c) return { sec: 'not', html: '<span class="dim">Loading…</span>' };
   if (m.seen) return { sec: 'seen', html: `<span class="dim">Seen${m.seenOn ? ' ' + fmtDate(m.seenOn, false) : ''}</span>` };
   if (m.newly) return { sec: 'new', html: `<span class="badge">Now on ${esc(shortName(m.newly.name))}</span>` };
-  if (c.providers.length) { const pr = c.providers[0]; return { sec: 'now', html: `<span class="svc">${pr.l ? `<img src="${IMG}w92${esc(pr.l)}" alt="" draggable="false">` : ''}${esc(pr.n)}</span>` }; }
+  if (c.providers.length) return { sec: 'now', html: '' };
   const t = today();
   // only upcoming dates on the card; past dates live in the details sheet
   const up = c.th && c.th > t ? `Theaters ${fmtDate(c.th, false)}` : c.dig && c.dig > t ? `Digital ${fmtDate(c.dig, false)}` : c.release && c.release > t ? `Out ${fmtDate(c.release, false)}` : '';
-  return { sec: 'not', html: up ? `<span class="dim">${up}</span>` : '' };
+  return { sec: 'not', html: up && V('movie', 'upcoming') ? `<span class="dim">${up}</span>` : '' };
 }
 
 /* ---------- card HTML ---------- */
@@ -923,33 +941,50 @@ function logosHtml(c) {
   return `<div class="logos">${shown.map(p => p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="${esc(p.n)}" title="${esc(p.n)}" loading="lazy" draggable="false">` : '').join('')}${c.providers.length > 7 ? `<span>+${c.providers.length - 7}</span>` : ''}</div>`;
 }
 
+function cardScores(c, kind) {
+  const r = (c && c.ratings) || {};
+  const out = [V(kind, 'rt') && r.rt ? `🍅 ${esc(r.rt)}` : '', V(kind, 'pop') && r.pop ? `🍿 ${esc(r.pop)}` : '', V(kind, 'imdb') && r.imdb ? `<span class="imdbs">IMDb</span> ${esc(r.imdb)}` : ''].filter(Boolean).join(' ');
+  return out ? `<span class="scores">${out}</span>` : '';
+}
+function cardService(c, kind) {
+  if (!V(kind, 'service') || !c || !c.providers || !c.providers.length) return '';
+  const pr = c.providers[0];
+  return `<span class="svc">${pr.l ? `<img src="${IMG}w92${esc(pr.l)}" alt="" draggable="false">` : ''}${esc(pr.n)}</span>`;
+}
+const cardPoster = (kind, path, title) => V(kind, 'poster') ? posterHtml(path, title, 'w92') : '';
+const cardYear = (kind, year) => year && V(kind, 'year') ? ` <span class="yr">${esc(year)}</span>` : '';
+
 function showCard(s, mode) {
   const c = C['tv:' + s.id], st = showState(s);
   const title = (c && c.title) || s.title, year = (c && c.year) || s.year;
+  const extras = st.loaded ? [
+    V('tv', 'next') && st.upToDate && st.nextDate ? `<span class="dim">Next ${esc(fmtDate(st.nextDate, false))}</span>` : '',
+    V('tv', 'runtime') && c.runtime ? `<span class="dim">${fmtRun(c.runtime)}/ep</span>` : '',
+    cardScores(c, 'tv'), cardService(c, 'tv')] : [];
+  const line = [st.html, ...extras].filter(Boolean).join(' · ') + (st.endedTag && V('tv', 'ended') ? '<span class="tag end">Ended</span>' : '');
   const acts = mode === 'arch' ? `<button class="a-del" data-act="delShow" data-id="${s.id}">Delete</button>`
     : `<button class="a-arch" data-act="archShow" data-id="${s.id}">Archive</button><button class="a-del" data-act="delShow" data-id="${s.id}">Delete</button>`;
   const right = mode === 'arch' ? `<button class="plus txt quiet" data-act="unarchShow" data-id="${s.id}">Restore</button>`
     : `<button class="plus" data-act="plus1" data-id="${s.id}" ${st.canPlus ? '' : 'disabled'} aria-label="Watched next episode">+1</button>`;
-  return `<div class="row" data-id="${s.id}"><div class="acts">${acts}</div><div class="card" data-act="showInfo" data-id="${s.id}">
-    ${posterHtml((c && c.poster) || s.poster, title, 'w92')}
+  return `<div class="row" data-id="${s.id}"><div class="acts">${acts}</div><div class="card${V('tv', 'poster') ? '' : ' noposter'}" data-act="showInfo" data-id="${s.id}">
+    ${cardPoster('tv', (c && c.poster) || s.poster, title)}
     <div class="info">
-      <div class="t">${esc(title)}${year ? ` <span class="yr">${esc(year)}</span>` : ''}</div>
-      <button class="st" data-act="picker" data-id="${s.id}">${st.html}</button>
+      <div class="t">${esc(title)}${cardYear('tv', year)}</div>
+      <button class="st" data-act="picker" data-id="${s.id}">${line}</button>
     </div>${right}</div></div>`;
 }
 
 function movieCard(m) {
   const c = C['movie:' + m.id], st = movieState(m);
   const title = (c && c.title) || m.title, year = (c && c.year) || m.year;
-  const r = (c && c.ratings) || {};
-  const scores = m.seen ? '' : [r.rt ? `🍅 ${esc(r.rt)}` : '', r.pop ? `🍿 ${esc(r.pop)}` : ''].filter(Boolean).join(' ');
-  const line = [c && c.runtime ? fmtRun(c.runtime) : '', scores ? `<span class="scores">${scores}</span>` : '', st.html].filter(Boolean).join(' · ');
+  const line = [c && c.runtime && V('movie', 'runtime') ? fmtRun(c.runtime) : '', m.seen ? '' : cardScores(c, 'movie'),
+    st.sec === 'now' ? cardService(c, 'movie') : '', st.html].filter(Boolean).join(' · ');
   const right = m.seen ? `<button class="plus txt quiet" data-act="unseen" data-id="${m.id}">Restore</button>`
     : `<button class="plus txt" data-act="seen" data-id="${m.id}">Seen</button>`;
-  return `<div class="row" data-id="${m.id}"><div class="acts"><button class="a-del" data-act="delMovie" data-id="${m.id}">Delete</button></div><div class="card" data-act="movieInfo" data-id="${m.id}">
-    ${posterHtml((c && c.poster) || m.poster, title, 'w92')}
+  return `<div class="row" data-id="${m.id}"><div class="acts"><button class="a-del" data-act="delMovie" data-id="${m.id}">Delete</button></div><div class="card${V('movie', 'poster') ? '' : ' noposter'}" data-act="movieInfo" data-id="${m.id}">
+    ${cardPoster('movie', (c && c.poster) || m.poster, title)}
     <div class="info">
-      <div class="t">${esc(title)}${year ? ` <span class="yr">${esc(year)}</span>` : ''}</div>
+      <div class="t">${esc(title)}${cardYear('movie', year)}</div>
       <div class="sub">${line || '&nbsp;'}</div>
     </div>${right}</div></div>`;
 }
@@ -1427,6 +1462,9 @@ function settingsHtml() {
   <div class="seg">${[['top', 'Top of the ranking'], ['bottom', 'Bottom']].map(([v, l]) => `<button class="${(D.settings.newAt || 'top') === v ? 'on' : ''}" data-act="newAt" data-v="${v}">${l}</button>`).join('')}</div>
   <h3>Keep caught-up shows on top when the next episode is within</h3>
   <div class="seg">${[[7, '1 week'], [14, '2 weeks'], [30, '1 month'], [0, 'Off']].map(([v, l]) => `<button class="${w === v ? 'on' : ''}" data-act="win" data-v="${v}">${l}</button>`).join('')}</div>
+  ${['tv', 'movie'].map(kind => `<h3>${kind === 'tv' ? 'TV list' : 'Movie list'} shows</h3><div class="group">
+    ${VIEW_OPTS[kind].map(([k, label]) => `<button class="gi" data-act="viewTog" data-kind="${kind}" data-k="${k}"><span class="sl">${label}</span><span class="sw ${V(kind, k) ? 'on' : ''}"></span></button>`).join('')}</div>`).join('')}
+  <p class="note">Title, the episode line (TV) and the +1 / Seen button always show. Everything is on each title's details page.</p>
   <h3>Details pages</h3>
   <div class="seg">${[[true, 'Parents guide on'], [false, 'Off']].map(([v, l]) => `<button class="${!!D.settings.pg === v ? 'on' : ''}" data-act="pg" data-v="${v ? 1 : 0}">${l}</button>`).join('')}</div>
   <p class="note">Adds the age rating, what it means, and links to IMDb's and Common Sense Media's parents guides at the bottom of each details page.</p>
@@ -1677,6 +1715,7 @@ const ACT = {
   },
   joinGist(b) { return joinGist(b.dataset.id); },
   saveToken() { D.settings.ghToken = ($('#kG').value || '').trim(); save(); document.activeElement && document.activeElement.blur(); rerenderSettings(); toast(D.settings.ghToken ? 'Token saved' : 'Token removed'); },
+  viewTog(b) { const v = D.settings.view[b.dataset.kind]; v[b.dataset.k] = !v[b.dataset.k]; save(); rerenderSettings(); render(); },
   pg(b) { D.settings.pg = b.dataset.v === '1'; save(); rerenderSettings(); },
   newAt(b) { D.settings.newAt = b.dataset.v; save(); rerenderSettings(); },
   win(b) { D.settings.win = +b.dataset.v; save(); render(); rerenderSettings(); },
