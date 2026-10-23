@@ -136,6 +136,7 @@ main { max-width: 680px; margin: 0 auto; }
 .sub { font-size: 13.5px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
 .sub .badge { font-size: 11.5px; padding: 1px 7px; }
 .svc { color: var(--text); font-weight: 500; }
+.scores { color: var(--text); }
 .svc img { width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 4px; }
 .yr { color: var(--sub); font-weight: 400; font-size: 14px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px; margin-top: 3px; font-size: 13px; color: var(--sub); }
@@ -269,7 +270,7 @@ h3 { margin: 24px 28px 7px; font-size: 13px; font-weight: 600; color: var(--sub)
 .seg button { flex: 1; border: 0; background: none; padding: 8px 4px; border-radius: 9px; font-size: 14px; }
 .seg button.on { background: var(--card); font-weight: 650; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 label.fld { display: block; font-size: 13px; color: var(--sub); margin-bottom: 11px; }
-input[type=text], input[type=search] { width: 100%; font-size: 16px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); color: var(--text); margin-top: 5px; -webkit-appearance: none; appearance: none; }
+input[type=text], input[type=search], input[type=password] { width: 100%; font-size: 16px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); color: var(--text); margin-top: 5px; -webkit-appearance: none; appearance: none; }
 .credits { margin: 0 20px; text-align: center; font-size: 13px; color: var(--sub); }
 .credits img { height: 22px; margin: 8px auto 4px; }
 .credits p { margin: 6px 0; }
@@ -354,7 +355,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -401,11 +402,158 @@ function fmtRun(m) { if (!m) return ''; return m >= 60 ? `${Math.floor(m / 60)}h
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { problem('Reading saved data', e); return null; } }
 let D = load(LS_DATA);
 if (!D || typeof D !== 'object' || !Array.isArray(D.profiles)) D = { profiles: [], active: null, tab: 'shows', lastRefresh: 0 };
-D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', newAt: 'top', pg: false }, D.settings || {});
+D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false }, D.settings || {});
 let C = load(LS_CACHE);
 if (!C || typeof C !== 'object') C = {};
 
-function save() { try { localStorage.setItem(LS_DATA, JSON.stringify(D)); } catch (e) { problem('Saving your lists', e); } }
+function save() {
+  let changed = false;
+  for (const pr of D.profiles) if (pr.sync && stamp(pr) && pr.id === D.active) changed = true;
+  try { localStorage.setItem(LS_DATA, JSON.stringify(D)); } catch (e) { problem('Saving your lists', e); }
+  if (changed) scheduleSync();
+}
+
+/* =====================================================================
+   SHARED PROFILES (sync between phones through a private GitHub gist)
+   Every synced field carries its own timestamp (_u). Two phones merge
+   field by field, newest wins; deletions are kept as "tombstones".
+   ===================================================================== */
+const GIST_FILE = 'watchlist-profile.json';
+const GIST_DESC = 'Watchlist shared profile';
+const SYNC_FIELDS = { tv: ['title', 'poster', 'year', 'rank', 'added', 'pos', 'sp', 'arch', 'archOn'], movie: ['title', 'poster', 'year', 'rank', 'added', 'seen', 'seenOn'] };
+const ghToken = () => (D.settings.ghToken || '').trim();
+const listOf = (pr, kind) => kind === 'tv' ? pr.shows : pr.movies;
+const fieldSig = v => JSON.stringify(v === undefined ? null : v);
+// Record what changed on this phone since the last save (field by field)
+function stamp(pr) {
+  const sy = pr.sync; sy.sig = sy.sig || {}; sy.tomb = sy.tomb || {};
+  const now = Date.now(), seen = new Set(); let changed = false;
+  for (const kind of ['tv', 'movie']) for (const it of listOf(pr, kind)) {
+    const k = kind + ':' + it.id; seen.add(k);
+    const sg = sy.sig[k] || (sy.sig[k] = {}); it._u = it._u || {};
+    for (const f of SYNC_FIELDS[kind]) { const v = fieldSig(it[f]); if (sg[f] !== v) { sg[f] = v; it._u[f] = now; changed = true; } }
+  }
+  for (const k of Object.keys(sy.sig)) if (!seen.has(k)) { delete sy.sig[k]; sy.tomb[k] = now; changed = true; }
+  return changed;
+}
+function syncPayload(pr) {
+  const pick = kind => listOf(pr, kind).slice().sort(byRank).map(it => {
+    const o = { id: it.id }; for (const f of SYNC_FIELDS[kind]) o[f] = it[f] === undefined ? null : it[f];
+    o._u = it._u || {}; return o;
+  });
+  return JSON.stringify({ app: 'watchlist', format: 1, name: pr.name, shows: pick('tv'), movies: pick('movie'), tomb: pr.sync.tomb || {} });
+}
+function mergeRemote(pr, remote) {
+  const sy = pr.sync, tomb = Object.assign({}, remote.tomb || {});
+  for (const [k, at] of Object.entries(sy.tomb || {})) tomb[k] = Math.max(tomb[k] || 0, at);
+  const cutoff = Date.now() - 120 * 864e5;
+  for (const k of Object.keys(tomb)) if (tomb[k] < cutoff) delete tomb[k];
+  for (const kind of ['tv', 'movie']) {
+    const L = new Map(listOf(pr, kind).map(i => [i.id, i]));
+    const R = new Map(((kind === 'tv' ? remote.shows : remote.movies) || []).filter(i => i && i.id).map(i => [i.id, i]));
+    const out = [];
+    for (const id of new Set([...L.keys(), ...R.keys()])) {
+      const l = L.get(id), r = R.get(id); let m;
+      if (l && r) {
+        m = l; m._u = Object.assign({}, l._u);
+        for (const f of SYNC_FIELDS[kind]) { const lu = (l._u || {})[f] || 0, ru = (r._u || {})[f] || 0; if (ru > lu) { m[f] = r[f]; m._u[f] = ru; } }
+      } else if (l) m = l;
+      else m = Object.assign(kind === 'tv' ? { pos: null, sp: [], arch: false, archOn: null } : { seen: false, seenOn: null, streaming: null, newly: null }, r, { _u: Object.assign({}, r._u) });
+      const last = Math.max(0, ...Object.values(m._u || {}));
+      const dead = tomb[kind + ':' + id];
+      if (dead && dead >= last) continue;
+      if (dead) delete tomb[kind + ':' + id];
+      out.push(m);
+    }
+    out.sort((a, b) => (a.rank - b.rank) || (a.id - b.id));
+    if (kind === 'tv') pr.shows = out; else pr.movies = out;
+  }
+  sy.tomb = tomb;
+  // what we now hold counts as synced, not as a local change
+  sy.sig = {};
+  for (const kind of ['tv', 'movie']) for (const it of listOf(pr, kind)) {
+    const sg = sy.sig[kind + ':' + it.id] = {}; for (const f of SYNC_FIELDS[kind]) sg[f] = fieldSig(it[f]);
+  }
+}
+async function gh(method, path, body) {
+  const t = ghToken();
+  if (!t) throw new ApiError('No GitHub token on this phone. Add it in Settings → Sync between phones.', true);
+  const opt = { method, cache: 'no-store', headers: { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json' } };
+  if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  let res;
+  try { res = await fetch('https://api.github.com' + path, opt); } catch (e) { throw new ApiError('Could not reach GitHub to sync. Check your internet connection.'); }
+  if (res.status === 401) throw new ApiError('GitHub says the sync token is invalid or expired. Paste a new one in Settings → Sync between phones.', true);
+  if (res.status === 403) throw new ApiError('GitHub refused the sync (403). The token may be missing the "gist" permission.', true);
+  if (res.status === 404) throw new ApiError('The shared profile was not found on GitHub. It may have been deleted, or this token belongs to a different account.', true);
+  if (!res.ok) throw new ApiError('GitHub error ' + res.status + ' while syncing.');
+  return res.status === 204 ? null : res.json();
+}
+async function readGist(id) {
+  const g = await gh('GET', `/gists/${encodeURIComponent(id)}`);
+  const f = g && g.files && g.files[GIST_FILE];
+  if (!f) return { gist: g, text: null, data: { shows: [], movies: [], tomb: {} } };
+  let text = f.content;
+  if (f.truncated && f.raw_url) text = await (await fetch(f.raw_url, { cache: 'no-store' })).text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) { throw new ApiError("The shared profile's data on GitHub is damaged. Export a backup from the other phone and share again.", true); }
+  return { gist: g, text, data };
+}
+let syncing = null, syncTimer = null;
+function scheduleSync() { clearTimeout(syncTimer); syncTimer = setTimeout(() => { const pr = prof(); if (pr && pr.sync) syncProfile(pr).catch(e => problem('Sync', e)); }, 2500); }
+function syncProfile(pr, opts = {}) {
+  if (!pr || !pr.sync || !pr.sync.gist || !ghToken()) return Promise.resolve(false);
+  if (syncing) return syncing.then(() => syncProfile(pr, opts));
+  clearTimeout(syncTimer);
+  syncing = (async () => {
+    stamp(pr);
+    const { text } = await readGist(pr.sync.gist).then(r => { pr._remote = r.data; return r; });
+    stamp(pr); // catch any taps made while we were waiting on the network
+    mergeRemote(pr, pr._remote); delete pr._remote;
+    const payload = syncPayload(pr);
+    if (payload !== text) await gh('PATCH', `/gists/${encodeURIComponent(pr.sync.gist)}`, { files: { [GIST_FILE]: { content: payload } } });
+    pr.sync.at = Date.now(); pr.sync.err = null;
+    try { localStorage.setItem(LS_DATA, JSON.stringify(D)); } catch (e) { problem('Saving your lists', e); }
+    render(); rerenderSettings();
+    if (opts.toast) toast('Synced');
+    return true;
+  })().catch(e => { pr.sync.err = e.message; delete pr._remote; throw e; }).finally(() => { syncing = null; });
+  return syncing;
+}
+async function shareProfile(pr) {
+  if (!ghToken()) { toast('Add your GitHub token first'); return; }
+  pr.sync = { gist: null, sig: {}, tomb: {} };
+  stamp(pr);
+  try {
+    const g = await gh('POST', '/gists', { description: `${GIST_DESC}: ${pr.name}`, public: false, files: { [GIST_FILE]: { content: syncPayload(pr) } } });
+    pr.sync.gist = g.id; pr.sync.at = Date.now();
+    save(); render(); rerenderSettings();
+    toast(`“${pr.name}” is shared. On the other phone: Settings → Join a shared profile`);
+  } catch (e) { delete pr.sync; save(); rerenderSettings(); throw e; }
+}
+async function openJoin() {
+  if (!ghToken()) { toast('Add your GitHub token first'); return; }
+  const sh = showSheet('<h2>Join a shared profile</h2><p class="dim">Looking on GitHub…</p>');
+  let list;
+  try { list = (await gh('GET', '/gists?per_page=100')).filter(g => g.files && g.files[GIST_FILE]); }
+  catch (e) { closeSheet(); problem('Join', e); return; }
+  const mine = new Set(D.profiles.filter(x => x.sync).map(x => x.sync.gist));
+  sh.el.innerHTML = `<h2>Join a shared profile</h2><div class="subl">Shared profiles in this GitHub account</div>` +
+    (list.length ? list.map(g => `<button class="opt" data-act="joinGist" data-id="${esc(g.id)}"><span>${esc((g.description || GIST_DESC).replace(GIST_DESC + ': ', '') || 'Shared profile')}</span><small>${mine.has(g.id) ? '✓ On this phone' : 'Join ›'}</small></button>`).join('')
+      : '<p class="dim">None yet. On the other phone, open Settings → Sync between phones → Share.</p>');
+}
+async function joinGist(id) {
+  const have = D.profiles.find(x => x.sync && x.sync.gist === id);
+  while (sheetStack.length) closeSheet();
+  if (have) { D.active = have.id; save(); render(); rerenderSettings(); refresh(); toast(`Switched to “${have.name}”`); return; }
+  const { data } = await readGist(id);
+  let name = String(data.name || 'Shared').slice(0, 30); const names = new Set(D.profiles.map(x => x.name));
+  for (let i = 2; names.has(name); i++) name = `${data.name || 'Shared'} ${i}`;
+  const pr = { id: newId(), name, shows: [], movies: [], sync: { gist: id, sig: {}, tomb: {} } };
+  D.profiles.push(pr); D.active = pr.id;
+  await syncProfile(pr);
+  for (const m of pr.movies) { const c = C['movie:' + m.id]; m.streaming = c ? c.providers.length > 0 : null; }
+  save(); while (pageStack.length) closePage(); render(); refresh(); toast(`Joined “${name}”`);
+}
 function saveCache() {
   try { localStorage.setItem(LS_CACHE, JSON.stringify(C)); }
   catch (e) { pruneCache(); try { localStorage.setItem(LS_CACHE, JSON.stringify(C)); } catch (e2) { problem('Saving title data (phone storage may be full)', e2); } }
@@ -645,6 +793,7 @@ async function refresh(opts = {}) {
   refreshing = true; $('#refBtn').classList.add('spin');
   let ok = true;
   try {
+    if (p.sync && ghToken()) { try { await syncProfile(p); } catch (e) { problem('Sync', e); } }
     const t = today();
     const keys = [...p.shows.map(s => 'tv:' + s.id), ...p.movies.map(m => 'movie:' + m.id)];
     const seenMovie = new Set(p.movies.filter(m => m.seen).map(m => 'movie:' + m.id));
@@ -792,7 +941,9 @@ function showCard(s, mode) {
 function movieCard(m) {
   const c = C['movie:' + m.id], st = movieState(m);
   const title = (c && c.title) || m.title, year = (c && c.year) || m.year;
-  const line = [c && c.runtime ? fmtRun(c.runtime) : '', st.html].filter(Boolean).join(' · ');
+  const r = (c && c.ratings) || {};
+  const scores = m.seen ? '' : [r.rt ? `🍅 ${esc(r.rt)}` : '', r.pop ? `🍿 ${esc(r.pop)}` : ''].filter(Boolean).join(' ');
+  const line = [c && c.runtime ? fmtRun(c.runtime) : '', scores ? `<span class="scores">${scores}</span>` : '', st.html].filter(Boolean).join(' · ');
   const right = m.seen ? `<button class="plus txt quiet" data-act="unseen" data-id="${m.id}">Restore</button>`
     : `<button class="plus txt" data-act="seen" data-id="${m.id}">Seen</button>`;
   return `<div class="row" data-id="${m.id}"><div class="acts"><button class="a-del" data-act="delMovie" data-id="${m.id}">Delete</button></div><div class="card" data-act="movieInfo" data-id="${m.id}">
@@ -1285,6 +1436,16 @@ function settingsHtml() {
     <label class="fld">MDBList key (better Rotten Tomatoes coverage)<input type="text" id="kM" value="${esc(D.settings.mdbKey)}" placeholder="${builtM ? 'Using the built-in key' : 'Not set'}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
     <button class="btn sm" data-act="saveKeys">Save keys</button></div>
   <p class="note">Optional. Leave blank to use the keys built into the app, or paste your own free keys to use those instead.</p>
+  <h3>Sync between phones</h3>
+  <div class="group">
+    ${p.sync ? `<div class="gi"><span class="gl">“${esc(p.name)}” is shared<small>${p.sync.err ? '<span class="danger">Last sync failed — see the red box</span>' : 'Last synced ' + (p.sync.at ? esc(new Date(p.sync.at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })) : 'never')}</small></span><button class="mini" data-act="syncNow">Sync now</button></div>
+      <button class="gi danger" data-act="unshare">Stop sharing “${esc(p.name)}” on this phone</button>`
+    : `<button class="gi" data-act="share">Share “${esc(p.name)}” with another phone<span class="chev">›</span></button>`}
+    <button class="gi" data-act="joinShared">Join a shared profile<span class="chev">›</span></button></div>
+  <div class="group pad" style="margin-top:10px">
+    <label class="fld">GitHub token (gist access only)<input type="password" id="kG" value="${esc(D.settings.ghToken)}" placeholder="Not set" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
+    <button class="btn sm" data-act="saveToken">Save token</button></div>
+  <p class="note">The token stays on this phone and is never in backups. A shared profile is saved as a private file (a secret gist) in your GitHub account, and GitHub keeps every earlier version. Both phones need the same token.</p>
   <h3>Data</h3><div class="group"><button class="gi" data-act="forceRefresh">Refresh everything now<span class="chev">›</span></button></div>
   <p class="note">Last updated: ${esc(last)}. Episodes and streaming update once a day; ratings once a week.</p>
   <h3>Credits</h3>
@@ -1347,7 +1508,7 @@ function createProfile(name) {
 }
 function profilesSheet() {
   const p = prof();
-  showSheet(`<h2>Profiles</h2>${D.profiles.map(pr => `<button class="opt" data-act="switchProf" data-id="${pr.id}"><span>${esc(pr.name)}</span><small>${pr.id === p.id ? '✓ Current' : pr.shows.length + ' shows · ' + pr.movies.length + ' movies'}</small></button>`).join('')}
+  showSheet(`<h2>Profiles</h2>${D.profiles.map(pr => `<button class="opt" data-act="switchProf" data-id="${pr.id}"><span>${esc(pr.name)}</span><small>${pr.sync ? 'Shared · ' : ''}${pr.id === p.id ? '✓ Current' : pr.shows.length + ' shows · ' + pr.movies.length + ' movies'}</small></button>`).join('')}
     <button class="opt" data-act="addProf"><span style="color:var(--accent);font-weight:600">+ Add profile</span></button>
     <button class="opt" data-act="settings"><span>Manage profiles in Settings</span><small>›</small></button>`);
 }
@@ -1392,7 +1553,7 @@ async function handleImportFile(file) {
   const p = prof();
   showSheet(`<h2>Import “${esc(data.name)}”</h2><div class="subl">${data.shows.length} shows · ${data.movies.length} movies</div>
     <button class="opt" data-act="impNew"><span>Add as a new profile</span><small>›</small></button>
-    <button class="opt" data-act="impReplace"><span>Replace “${esc(p.name)}”</span><small>overwrites its lists</small></button>
+    <button class="opt" data-act="impReplace"><span>Replace “${esc(p.name)}”</span><small>${p.sync ? 'shared: changes it on every phone' : 'overwrites its lists'}</small></button>
     <button class="opt" data-act="closeSheet"><span>Cancel</span></button>`);
 }
 function importAsNew(data) {
@@ -1418,7 +1579,8 @@ function welcomeHtml() {
          <p>Then open <b>Watchlist</b> from your Home Screen and finish setup there. Lists made in a Safari tab don't carry over to the Home Screen app.</p>`}</div>
     <div class="wstep"><b>2. Create a profile</b><input type="text" id="newProf" placeholder="Your name" maxlength="30" autocomplete="off">
       <button class="btn" data-act="createProf">Create profile</button><p class="or">or</p>
-      <button class="btn ghost" data-act="import">Import a backup</button></div></div>`;
+      <button class="btn ghost" data-act="import">Import a backup</button>
+      <button class="btn ghost" data-act="welcomeJoin" style="margin-top:8px">Join a shared profile</button></div></div>`;
 }
 
 /* ---------- actions (every button with data-act) ---------- */
@@ -1497,6 +1659,24 @@ const ACT = {
   impNew() { if (pendingImport) importAsNew(pendingImport); pendingImport = null; },
   impReplace() { if (!pendingImport) return; const p = prof(); p.shows = pendingImport.shows; p.movies = pendingImport.movies; pendingImport = null; finishImport(`Replaced “${p.name}” from backup`); },
 
+  share() { const p = prof(); return shareProfile(p); },
+  syncNow() { return syncProfile(prof(), { toast: true }); },
+  unshare() {
+    const p = prof();
+    if (!confirm(`Stop sharing “${p.name}” on this phone?\n\nThis phone keeps its own copy and stops syncing. The other phone and the copy on GitHub are not changed.`)) return;
+    delete p.sync; for (const it of [...p.shows, ...p.movies]) delete it._u; save(); render(); rerenderSettings();
+  },
+  joinShared() { return openJoin(); },
+  welcomeJoin() {
+    if (!ghToken()) {
+      const t = prompt('Paste the GitHub token (the same one used on the other phone):');
+      if (!t || !t.trim()) return;
+      D.settings.ghToken = t.trim(); save();
+    }
+    return openJoin();
+  },
+  joinGist(b) { return joinGist(b.dataset.id); },
+  saveToken() { D.settings.ghToken = ($('#kG').value || '').trim(); save(); document.activeElement && document.activeElement.blur(); rerenderSettings(); toast(D.settings.ghToken ? 'Token saved' : 'Token removed'); },
   pg(b) { D.settings.pg = b.dataset.v === '1'; save(); rerenderSettings(); },
   newAt(b) { D.settings.newAt = b.dataset.v; save(); rerenderSettings(); },
   win(b) { D.settings.win = +b.dataset.v; save(); render(); rerenderSettings(); },
@@ -1526,6 +1706,21 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'newProf') ACT.createProf(); });
 
+/* ---------- auto-update: reload once when GitHub has a newer version ---------- */
+async function checkUpdate() {
+  if (!/^https?:/.test(location.protocol)) return;
+  try {
+    const r = await fetch('./index.html?check=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+    if (!m || m[1] === APP_VERSION) return;
+    let done = null; try { done = sessionStorage.getItem('watchlist.updatedTo'); sessionStorage.setItem('watchlist.updatedTo', m[1]); } catch (e) { /* ignore */ }
+    if (done === m[1]) return;
+    toast('Updating to v' + m[1] + '…');
+    setTimeout(() => location.replace('./?v=' + encodeURIComponent(m[1])), 700);
+  } catch (e) { /* offline: try again next open */ }
+}
+
 /* ---------- start ---------- */
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
@@ -1533,6 +1728,7 @@ document.addEventListener('visibilitychange', () => {
   if (!D.profiles.length) return;
   if (D.tab === 'movies' && Date.now() - hiddenAt > 10 * 60 * 1000) { moviesShown(true); render(); }
   refresh();
+  checkUpdate();
 });
 
 (function init() {
@@ -1544,6 +1740,7 @@ document.addEventListener('visibilitychange', () => {
     render();
     if (D.profiles.length) refresh();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    checkUpdate();
   } catch (e) { problem('Starting up', e); }
 })();
 </script>
