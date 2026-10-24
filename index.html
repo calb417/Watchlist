@@ -289,6 +289,7 @@ input[type=text], input[type=search], input[type=password] { width: 100%; font-s
 .hint { color: var(--sub); font-size: 14px; padding: 6px 18px; }
 .res { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 9px 16px; }
 .res .poster { width: 46px; height: 69px; border-radius: 7px; font-size: 17px; }
+.res .rpost { flex: none; display: block; padding: 4px; margin: -4px; }
 .res .rt2 { flex: 1; min-width: 0; }
 .res .rt2 b { display: block; font-size: 16px; font-weight: 600; }
 .res .rt2 small { color: var(--sub); font-size: 13px; }
@@ -374,7 +375,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.4';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -794,6 +795,11 @@ async function fetchMovie(id) {
 
 async function fetchRatings(key) {
   const e = C[key]; if (!e) return;
+  e.ratings = await lookupRatings(e.type, e.id, e.imdb);
+  e.ratingsAt = today();
+}
+async function lookupRatings(type, id, imdb) {
+  const e = { type, id, imdb };
   let r = null;
   if (mdbKey()) {
     try {
@@ -809,8 +815,7 @@ async function fetchRatings(key) {
     r = { rt: rt || null, pop: null, imdb: im, src: 'omdb' };
   }
   if (!r) r = { rt: null, pop: null, imdb: null, src: mdbKey() ? 'mdb' : 'omdb' };
-  e.ratings = r;
-  e.ratingsAt = today();
+  return r;
 }
 const ratingsStale = (c, t, force) => !c.ratingsAt || daysBetween(c.ratingsAt, t) >= (force ? 1 : 7) || (mdbKey() && !(c.ratings && c.ratings.src === 'mdb'));
 
@@ -1315,12 +1320,24 @@ async function openInfo(type, id) {
   infoSheet = { k, sh };
   if (!MI[k]) {
     try {
-      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings,external_ids' })
-        : await tmdb(`/movie/${id}`, { append_to_response: 'credits,release_dates' });
+      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings,external_ids,watch/providers' })
+        : await tmdb(`/movie/${id}`, { append_to_response: 'credits,release_dates,watch/providers' });
     } catch (e) { problem(type === 'tv' ? 'Show details' : 'Movie details', e); if (infoSheet && infoSheet.sh === sh) closeSheet(); return; }
   }
-  if (infoSheet && infoSheet.sh === sh) sh.el.innerHTML = type === 'tv' ? showInfoHtml(MI[k]) : movieInfoHtml(MI[k]);
+  const paint = () => { if (infoSheet && infoSheet.sh === sh) sh.el.innerHTML = type === 'tv' ? showInfoHtml(MI[k]) : movieInfoHtml(MI[k]); };
+  paint();
+  // a title from search or a person page isn't cached: look up its scores once, kept in memory only
+  const d = MI[k];
+  if (!C[k] && !d._r && !d._rLoading && ratingsOn()) {
+    d._rLoading = true;
+    try { d._r = await lookupRatings(type, id, type === 'tv' ? d.external_ids && d.external_ids.imdb_id : d.imdb_id); paint(); }
+    catch (e) { problem('Ratings', e); }
+    d._rLoading = false;
+  }
 }
+/* scores and streaming for a details sheet: the cached list entry if there is one, else what the sheet fetched */
+const infoRatings = (d, c) => (c.type ? c.ratings : d._r) || {};
+const infoProviders = (d, c) => c.providers || provs(rawProv(d['watch/providers']));
 const rateHtml = r => (r.rt ? `<span>🍅 ${esc(r.rt)}</span>` : '') + (r.pop ? `<span>🍿 ${esc(r.pop)}</span>` : '') + (r.imdb ? `<span class="im"><b>IMDb</b>${esc(r.imdb)}</span>` : '');
 const CERT_MEANING = {
   'G': 'General audiences. All ages admitted.',
@@ -1350,6 +1367,7 @@ function parentsGuideHtml(cert, descriptors, imdb, title) {
 const castHtml = list => list.length ? `<div class="mi-h">Top billed cast</div><div class="cast">${list.map(p => `<button class="pp" data-act="person" data-id="${+p.id}">${p.img ? `<img src="${IMG}w185${esc(p.img)}" alt="" loading="lazy">` : '<span class="noimg"></span>'}<b>${esc(p.name)}</b><small>${esc(p.role || '')}${p.eps ? `<br>${esc(p.eps)}` : ''}</small></button>`).join('')}</div>` : '';
 /* names in the details sheet open that person's page */
 const peopleLinks = list => list.map(p => `<button class="plink" data-act="person" data-id="${+p.id}">${esc(p.name)}</button>`).join(', ');
+const MUSIC_JOBS = /^(original music composer|music|composer|main title theme composer|original series composer)$/i;
 const uniqPeople = list => { const seen = new Set(); return list.filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id)); };
 const provHtml = prov => `<div class="mi-h">Streaming</div>` + (prov.length ? `<div class="mi-prov">${prov.map(p => `<span>${p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</div>` : '<div class="mi-line dim">Not on a subscription or free service right now</div>');
 function showInfoHtml(d) {
@@ -1366,8 +1384,10 @@ function showInfoHtml(d) {
   const facts = [years, cert ? `<span class="cert">${esc(cert)}</span>` : '', run ? fmtRun(run) + '/ep' : ''].filter(Boolean).join(' · ');
   const genres = (d.genres || []).map(g => g.name).join(', ');
   const nets = (d.networks || []).map(n => n.name);
-  const rate = rateHtml(c.ratings || {});
+  const rate = rateHtml(infoRatings(d, c));
   const creators = uniqPeople(d.created_by || []);
+  const music = uniqPeople(((d.aggregate_credits && d.aggregate_credits.crew) || []).filter(p => (p.jobs || []).some(j => MUSIC_JOBS.test(j.job || '')))
+    .sort((a, b) => (b.total_episode_count || 0) - (a.total_episode_count || 0))).slice(0, 3);
   const cast = ((d.aggregate_credits && d.aggregate_credits.cast) || []).slice(0, 10).map(p => {
     const role = (p.roles || []).slice().sort((a, b) => (b.episode_count || 0) - (a.episode_count || 0))[0];
     const eps = p.total_episode_count;
@@ -1383,8 +1403,9 @@ function showInfoHtml(d) {
     <div class="mi-h">Status</div><div class="mi-line">${esc(status)}${next ? `<br><span class="dim">${next}</span>` : ''}</div>
     ${nets.length ? `<div class="mi-h">Network</div><div class="mi-line">${esc(nets.join(', '))}</div>` : ''}
     ${creators.length ? `<div class="mi-h">Created by</div><div class="mi-line">${peopleLinks(creators)}</div>` : ''}
+    ${music.length ? `<div class="mi-h">Music</div><div class="mi-line">${peopleLinks(music)}</div>` : ''}
     ${castHtml(cast)}
-    ${provHtml(c.providers || [])}
+    ${provHtml(infoProviders(d, c))}
     ${parentsGuideHtml(cert, tvDesc, (d.external_ids && d.external_ids.imdb_id) || c.imdb, d.name)}`;
 }
 function movieInfoHtml(d) {
@@ -1399,18 +1420,20 @@ function movieInfoHtml(d) {
   const crew = (d.credits && d.credits.crew) || [];
   const directors = uniqPeople(crew.filter(p => p.job === 'Director'));
   const writers = uniqPeople(crew.filter(p => p.department === 'Writing')).slice(0, 3);
+  const music = uniqPeople(crew.filter(p => MUSIC_JOBS.test(p.job || ''))).slice(0, 3);
   const cast = ((d.credits && d.credits.cast) || []).slice(0, 10);
   const facts = [year, cert ? `<span class="cert">${esc(cert)}</span>` : '', fmtRun(d.runtime)].filter(Boolean).join(' · ');
-  const rate = rateHtml(c.ratings || {});
+  const rate = rateHtml(infoRatings(d, c));
   const dt = usDates(d.release_dates), t = today();
   const rel = [dt.th ? `Theaters ${fmtDate(dt.th, false)}` : (d.release_date ? `Released ${fmtDate(d.release_date, false)}` : ''), dt.dig ? `Digital ${fmtDate(dt.dig, false)}` : ''].filter(Boolean).join(' · ');
-  const prov = (c.providers || []);
+  const prov = infoProviders(d, c);
   return `<div class="mi-top">${posterHtml(d.poster_path, d.title)}<div><h2>${esc(d.title)}</h2>
       <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}</div></div>
     ${d.tagline ? `<p class="tagline">${esc(d.tagline)}</p>` : ''}
     <p class="mi-ov">${d.overview ? esc(d.overview) : '<span class="dim">No synopsis available yet.</span>'}</p>
     ${directors.length ? `<div class="mi-h">Director${directors.length > 1 ? 's' : ''}</div><div class="mi-line">${peopleLinks(directors)}</div>` : ''}
     ${writers.length ? `<div class="mi-h">Writers</div><div class="mi-line">${peopleLinks(writers)}</div>` : ''}
+    ${music.length ? `<div class="mi-h">Music</div><div class="mi-line">${peopleLinks(music)}</div>` : ''}
     ${castHtml(cast.map(p => ({ id: p.id, name: p.name, img: p.profile_path, role: p.character })))}
     ${rel ? `<div class="mi-h">Release</div><div class="mi-line">${rel}</div>` : ''}
     ${provHtml(prov)}
@@ -1425,8 +1448,8 @@ let RES = [], searchSeq = 0; // every addable row on screen points into RES by i
 const PEOPLE_MAX = 5, FRANCHISE_MAX = 3, CREDITS_MAX = 200;
 const DEPT_GROUP = { Acting: 'act', Directing: 'dir', Writing: 'wri', Creator: 'wri' };
 const GROUPS = [['title', 'Titles'], ['act', 'Actors'], ['dir', 'Directors'], ['wri', 'Writers'], ['col', 'Franchises'], ['oth', 'Other people']];
-const DEPT_TABS = [['act', 'Acting'], ['dir', 'Directing'], ['wri', 'Writing']];
-const DEPT_NAME = { Acting: 'Actor', Directing: 'Director', Writing: 'Writer', Creator: 'Creator', Production: 'Producer' };
+const DEPT_TABS = [['act', 'Acting'], ['dir', 'Directing'], ['wri', 'Writing'], ['mus', 'Music']];
+const DEPT_NAME = { Acting: 'Actor', Directing: 'Director', Writing: 'Writer', Creator: 'Creator', Production: 'Producer', Sound: 'Composer' };
 const SELF_ROLE = /^(self|himself|herself|themselves|themself)\b/i; // talk shows, award shows, documentaries
 const TALK_GENRES = new Set([10767, 10763]); // TMDB genres: Talk, News
 const DIR_JOBS = /^(director|co-director|series director)$/i;
@@ -1513,7 +1536,7 @@ function resRow(r, note, stay) { // a title; tapping adds it
   const tv = r.media_type === 'tv', title = nameOf(r), p = prof();
   const inList = (tv ? p.shows : p.movies).some(x => x.id === r.id);
   const i = RES.push(r) - 1;
-  return `<button class="res" data-act="addRes" data-i="${i}"${stay ? ' data-stay="1"' : ''}>${posterHtml(r.poster_path, title, 'w92')}<span class="rt2"><b>${esc(title)}</b><small><span class="tp">${tv ? 'TV' : 'MOVIE'}</span>${esc(yearOf(r))}${note ? `${yearOf(r) ? ' · ' : ''}${esc(note)}` : ''}</small></span>${inList ? '<span class="inl">✓ In list</span>' : ''}</button>`;
+  return `<button class="res" data-act="addRes" data-i="${i}"${stay ? ' data-stay="1"' : ''}><span class="rpost" data-act="resInfo" data-type="${tv ? 'tv' : 'movie'}" data-id="${r.id}">${posterHtml(r.poster_path, title, 'w92')}</span><span class="rt2"><b>${esc(title)}</b><small><span class="tp">${tv ? 'TV' : 'MOVIE'}</span>${esc(yearOf(r))}${note ? `${yearOf(r) ? ' · ' : ''}${esc(note)}` : ''}</small></span>${inList ? '<span class="inl">✓ In list</span>' : ''}</button>`;
 }
 function personRow(r) {
   const kf = (r.known_for || []).filter(k => !k.adult).map(nameOf).filter(Boolean).slice(0, 2).join(', ');
@@ -1523,7 +1546,7 @@ function colRow(r) {
   return `<button class="res" data-act="franchise" data-id="${r.id}">${posterHtml(r.poster_path, r.name, 'w92')}<span class="rt2"><b>${esc(r.name)}</b><small><span class="tp">FRANCHISE</span>See all the movies</small></span><span class="chev">›</span></button>`;
 }
 
-/* Person page: their titles split into Acting / Directing / Writing, newest first (undated ones last) */
+/* Person page: their titles split into Acting / Directing / Writing / Music, newest first (undated ones last) */
 async function openPerson(id, onBack) {
   id = +id; const k = 'p:' + id, state = { tab: null, all: false };
   const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => personHtml(k, state), { live: true, after: p => { p.state = state; } });
@@ -1536,7 +1559,7 @@ async function openPerson(id, onBack) {
 }
 function personCredits(d) {
   if (d._cr) return d._cr;
-  const cc = d.combined_credits || {}, b = { act: new Map(), dir: new Map(), wri: new Map() };
+  const cc = d.combined_credits || {}, b = { act: new Map(), dir: new Map(), wri: new Map(), mus: new Map() };
   const put = (bk, r, note, hide) => {
     const key = r.media_type + ':' + r.id, x = b[bk].get(key);
     if (x) { if (note && !x._notes.includes(note)) x._notes.push(note); x._hide = x._hide && hide; x._eps += r.episode_count || 0; }
@@ -1549,6 +1572,7 @@ function personCredits(d) {
     if (!ok(r)) continue;
     if (r.department === 'Directing' && DIR_JOBS.test(r.job || '')) put('dir', r, '', talk(r));
     else if ((r.department === 'Writing' && !WRI_SKIP.test(r.job || '')) || r.department === 'Creator') put('wri', r, r.job || '', talk(r));
+    else if (MUSIC_JOBS.test(r.job || '')) put('mus', r, r.job === 'Original Music Composer' ? 'Composer' : r.job, talk(r));
   }
   // TV: when they first appeared in it if TMDB has that, else when the show started
   const when = x => x.first_credit_air_date || (x.media_type === 'tv' ? x.first_air_date : x.release_date) || '';
@@ -1562,7 +1586,7 @@ function personHtml(k, st) {
   const cr = personCredits(d), vis = bk => cr[bk].filter(x => st.all || !x._hide);
   const tabs = DEPT_TABS.filter(([bk]) => cr[bk].length);
   if (!st.tab || !cr[st.tab].length) {
-    const pref = DEPT_GROUP[d.known_for_department];
+    const pref = d.known_for_department === 'Sound' ? 'mus' : DEPT_GROUP[d.known_for_department];
     st.tab = (pref && vis(pref).length && pref) || (tabs.find(([bk]) => vis(bk).length) || tabs[0] || ['act'])[0];
   }
   const born = d.birthday ? (d.deathday ? `${d.birthday.slice(0, 4)}–${d.deathday.slice(0, 4)}` : `Born ${d.birthday.slice(0, 4)}`) : '';
@@ -1833,6 +1857,7 @@ const ACT = {
   profiles() { profilesSheet(); },
   archive() { openArchive(); },
   seenList() { openSeen(); },
+  resInfo(b) { return openInfo(b.dataset.type, b.dataset.id); },
   addRes(b) { const r = RES[+b.dataset.i]; if (r) return addResult(r, !!b.dataset.stay); },
   person(b) {
     // from a details sheet: close it, open the person, and bring the sheet back on Back
