@@ -375,7 +375,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.8.4';
+const APP_VERSION = '1.8.5';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -1546,10 +1546,14 @@ function colRow(r) {
   return `<button class="res" data-act="franchise" data-id="${r.id}">${posterHtml(r.poster_path, r.name, 'w92')}<span class="rt2"><b>${esc(r.name)}</b><small><span class="tp">FRANCHISE</span>See all the movies</small></span><span class="chev">›</span></button>`;
 }
 
+/* "Close all" in the header of person and franchise pages: straight back to the list from any depth */
+const closeAllBtn = () => '<button data-act="closeAll">Close all</button>';
+function closeAll() { while (sheetStack.length) closeSheet(); while (pageStack.length) closePage(); }
+
 /* Person page: their titles split into Acting / Directing / Writing / Music, newest first (undated ones last) */
 async function openPerson(id, onBack) {
   id = +id; const k = 'p:' + id, state = { tab: null, all: false };
-  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => personHtml(k, state), { live: true, after: p => { p.state = state; } });
+  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => personHtml(k, state), { live: true, right: closeAllBtn, after: p => { p.state = state; } });
   pg.onBack = onBack;
   if (!PI[k]) {
     try { PI[k] = await tmdb(`/person/${id}`, { append_to_response: 'combined_credits', language: 'en-US' }); }
@@ -1604,7 +1608,7 @@ function personHtml(k, st) {
 /* Franchise page: every movie in the series, in release order */
 async function openFranchise(id) {
   id = +id; const k = 'c:' + id;
-  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => franchiseHtml(k), { live: true });
+  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => franchiseHtml(k), { live: true, right: closeAllBtn });
   if (!PI[k]) {
     try { PI[k] = await tmdb(`/collection/${id}`, { language: 'en-US' }); }
     catch (e) { problem('Franchise', e); if (pageStack[pageStack.length - 1] === pg) closePage(); return; }
@@ -1857,6 +1861,7 @@ const ACT = {
   profiles() { profilesSheet(); },
   archive() { openArchive(); },
   seenList() { openSeen(); },
+  closeAll() { closeAll(); },
   resInfo(b) { return openInfo(b.dataset.type, b.dataset.id); },
   addRes(b) { const r = RES[+b.dataset.i]; if (r) return addResult(r, !!b.dataset.stay); },
   person(b) {
