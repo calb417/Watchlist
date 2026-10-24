@@ -237,7 +237,8 @@ body.welcome { padding-top: 0; }
 .mi-line { font-size: 15px; }
 .cast { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .cast::-webkit-scrollbar { display: none; }
-.cast div { flex: none; width: 78px; text-align: center; font-size: 12.5px; line-height: 1.3; }
+.cast .pp { flex: none; width: 78px; text-align: center; font-size: 12.5px; line-height: 1.3; border: 0; background: none; padding: 0; color: var(--text); }
+.plink { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); }
 .cast img, .cast .noimg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--chip); display: block; margin: 0 auto 5px; }
 .cast b { display: block; font-weight: 600; }
 .cast small { color: var(--sub); }
@@ -293,6 +294,17 @@ input[type=text], input[type=search], input[type=password] { width: 100%; font-s
 .res .rt2 small { color: var(--sub); font-size: 13px; }
 .tp { font-size: 11px; font-weight: 700; background: var(--chip); border-radius: 6px; padding: 2px 6px; margin-right: 6px; color: var(--text); }
 .inl { color: var(--good); font-size: 13px; font-weight: 700; flex: none; }
+.rsec { margin: 14px 18px 2px; font-size: 12.5px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; }
+.res .face { flex: none; width: 46px; height: 46px; border-radius: 50%; object-fit: cover; background: var(--chip); margin: 11px 0; }
+.res .face.ph, .phead .face.ph { display: grid; place-items: center; font-weight: 700; font-size: 18px; color: var(--sub); }
+.res .chev { flex: none; color: var(--sub); font-size: 20px; }
+.res .rt2 small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phead { display: flex; align-items: center; gap: 14px; padding: 16px 18px 4px; }
+.phead .face { flex: none; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--chip); }
+.phead b { display: block; font-size: 20px; }
+.phead small { color: var(--sub); font-size: 14px; }
+.pchips { padding: 10px 16px 8px; }
+.linkb { display: block; margin: 14px auto 6px; border: 0; background: none; color: var(--accent); font-size: 15px; font-weight: 600; padding: 8px; }
 
 /* Rank pages */
 .rrow .card { padding: 5px 6px 5px 10px; gap: 10px; cursor: default; }
@@ -362,7 +374,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.8.1';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -409,7 +421,10 @@ function fmtRun(m) { if (!m) return ''; return m >= 60 ? `${Math.floor(m / 60)}h
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { problem('Reading saved data', e); return null; } }
 let D = load(LS_DATA);
 if (!D || typeof D !== 'object' || !Array.isArray(D.profiles)) D = { profiles: [], active: null, tab: 'shows', lastRefresh: 0 };
-D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false }, D.settings || {});
+D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false, epLine: 'last' }, D.settings || {});
+/* Episode line on TV cards (Settings): 'behind' = S3E7 · 2 behind, 'last' = Last watched S3E7, 'next' = Next: S3E8 */
+const EP_LINE = [['behind', 'Behind'], ['last', 'Last watched'], ['next', 'Next up']];
+if (!EP_LINE.some(([v]) => v === D.settings.epLine)) D.settings.epLine = 'last';
 /* What each list's cards show (Settings → List view). Third value = default. */
 const VIEW_OPTS = {
   tv: [['poster', 'Poster', 1], ['year', 'Year', 1], ['rt', 'Rotten Tomatoes 🍅', 0], ['pop', 'Popcornmeter 🍿', 0], ['imdb', 'IMDb rating', 0],
@@ -900,10 +915,17 @@ function showState(s) {
   const ok = '<span class="ok">Up to date</span>';
   let html;
   if (!upToDate) {
-    const parts = [];
-    if (behindEps.length) parts.push(`<span class="behind">${behindEps.length} behind</span>`);
-    if (newSp.length) parts.push(`<span class="behind">${newSp.length} new special${newSp.length > 1 ? 's' : ''}</span>`);
-    html = `${posL} · ${parts.join(' · ')}`;
+    const mode = D.settings.epLine, parts = [];
+    const spL = newSp.length ? `<span class="behind">${newSp.length} new special${newSp.length > 1 ? 's' : ''}</span>` : '';
+    if (mode === 'behind') {
+      if (behindEps.length) parts.push(`<span class="behind">${behindEps.length} behind</span>`);
+      if (spL) parts.push(spL);
+      html = `${posL} · ${parts.join(' · ')}`;
+    } else {
+      // 'last' and 'next' leave out the count; new specials still show, since +1 can't mark them
+      const lead = mode === 'next' && behindEps.length ? `Next: S${behindEps[0].s}E${behindEps[0].e}` : p ? (mode === 'last' ? `Last watched ${posL}` : posL) : 'Not started';
+      html = [lead, spL].filter(Boolean).join(' · ');
+    }
   } else if (!p && !anyAired) html = `Not started · <span class="dim">Not aired yet</span>`;
   else html = `${posL} · ${ok}`;
   const endedTag = ended && upToDate && !!p;
@@ -1325,7 +1347,10 @@ function parentsGuideHtml(cert, descriptors, imdb, title) {
     ${desc.length ? `<div class="mi-line dim" style="margin-top:4px">Content: ${esc(desc.join(', '))}</div>` : ''}
     <div class="pglinks">${links}</div>`;
 }
-const castHtml = list => list.length ? `<div class="mi-h">Top billed cast</div><div class="cast">${list.map(p => `<div>${p.img ? `<img src="${IMG}w185${esc(p.img)}" alt="" loading="lazy">` : '<span class="noimg"></span>'}<b>${esc(p.name)}</b><small>${esc(p.role || '')}${p.eps ? `<br>${esc(p.eps)}` : ''}</small></div>`).join('')}</div>` : '';
+const castHtml = list => list.length ? `<div class="mi-h">Top billed cast</div><div class="cast">${list.map(p => `<button class="pp" data-act="person" data-id="${+p.id}">${p.img ? `<img src="${IMG}w185${esc(p.img)}" alt="" loading="lazy">` : '<span class="noimg"></span>'}<b>${esc(p.name)}</b><small>${esc(p.role || '')}${p.eps ? `<br>${esc(p.eps)}` : ''}</small></button>`).join('')}</div>` : '';
+/* names in the details sheet open that person's page */
+const peopleLinks = list => list.map(p => `<button class="plink" data-act="person" data-id="${+p.id}">${esc(p.name)}</button>`).join(', ');
+const uniqPeople = list => { const seen = new Set(); return list.filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id)); };
 const provHtml = prov => `<div class="mi-h">Streaming</div>` + (prov.length ? `<div class="mi-prov">${prov.map(p => `<span>${p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</div>` : '<div class="mi-line dim">Not on a subscription or free service right now</div>');
 function showInfoHtml(d) {
   const c = C['tv:' + d.id] || {};
@@ -1342,11 +1367,11 @@ function showInfoHtml(d) {
   const genres = (d.genres || []).map(g => g.name).join(', ');
   const nets = (d.networks || []).map(n => n.name);
   const rate = rateHtml(c.ratings || {});
-  const creators = (d.created_by || []).map(p => p.name);
+  const creators = uniqPeople(d.created_by || []);
   const cast = ((d.aggregate_credits && d.aggregate_credits.cast) || []).slice(0, 10).map(p => {
     const role = (p.roles || []).slice().sort((a, b) => (b.episode_count || 0) - (a.episode_count || 0))[0];
     const eps = p.total_episode_count;
-    return { name: p.name, img: p.profile_path, role: role && role.character ? role.character : '', eps: eps ? `${eps} episode${eps > 1 ? 's' : ''}` : '' };
+    return { id: p.id, name: p.name, img: p.profile_path, role: role && role.character ? role.character : '', eps: eps ? `${eps} episode${eps > 1 ? 's' : ''}` : '' };
   });
   const status = ended ? (/cancel/i.test(d.status) ? 'Canceled' : 'Ended') : (d.status === 'Returning Series' ? 'Returning series' : (d.status || ''));
   const nx = d.next_episode_to_air;
@@ -1357,7 +1382,7 @@ function showInfoHtml(d) {
     <p class="mi-ov">${d.overview ? esc(d.overview) : '<span class="dim">No synopsis available yet.</span>'}</p>
     <div class="mi-h">Status</div><div class="mi-line">${esc(status)}${next ? `<br><span class="dim">${next}</span>` : ''}</div>
     ${nets.length ? `<div class="mi-h">Network</div><div class="mi-line">${esc(nets.join(', '))}</div>` : ''}
-    ${creators.length ? `<div class="mi-h">Created by</div><div class="mi-line">${esc(creators.join(', '))}</div>` : ''}
+    ${creators.length ? `<div class="mi-h">Created by</div><div class="mi-line">${peopleLinks(creators)}</div>` : ''}
     ${castHtml(cast)}
     ${provHtml(c.providers || [])}
     ${parentsGuideHtml(cert, tvDesc, (d.external_ids && d.external_ids.imdb_id) || c.imdb, d.name)}`;
@@ -1372,8 +1397,8 @@ function movieInfoHtml(d) {
   const year = (d.release_date || '').slice(0, 4);
   const genres = (d.genres || []).map(g => g.name).join(', ');
   const crew = (d.credits && d.credits.crew) || [];
-  const directors = [...new Set(crew.filter(p => p.job === 'Director').map(p => p.name))];
-  const writers = [...new Set(crew.filter(p => p.department === 'Writing').map(p => p.name))].slice(0, 3);
+  const directors = uniqPeople(crew.filter(p => p.job === 'Director'));
+  const writers = uniqPeople(crew.filter(p => p.department === 'Writing')).slice(0, 3);
   const cast = ((d.credits && d.credits.cast) || []).slice(0, 10);
   const facts = [year, cert ? `<span class="cert">${esc(cert)}</span>` : '', fmtRun(d.runtime)].filter(Boolean).join(' · ');
   const rate = rateHtml(c.ratings || {});
@@ -1384,61 +1409,231 @@ function movieInfoHtml(d) {
       <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}</div></div>
     ${d.tagline ? `<p class="tagline">${esc(d.tagline)}</p>` : ''}
     <p class="mi-ov">${d.overview ? esc(d.overview) : '<span class="dim">No synopsis available yet.</span>'}</p>
-    ${directors.length ? `<div class="mi-h">Director${directors.length > 1 ? 's' : ''}</div><div class="mi-line">${esc(directors.join(', '))}</div>` : ''}
-    ${writers.length ? `<div class="mi-h">Writers</div><div class="mi-line">${esc(writers.join(', '))}</div>` : ''}
-    ${castHtml(cast.map(p => ({ name: p.name, img: p.profile_path, role: p.character })))}
+    ${directors.length ? `<div class="mi-h">Director${directors.length > 1 ? 's' : ''}</div><div class="mi-line">${peopleLinks(directors)}</div>` : ''}
+    ${writers.length ? `<div class="mi-h">Writers</div><div class="mi-line">${peopleLinks(writers)}</div>` : ''}
+    ${castHtml(cast.map(p => ({ id: p.id, name: p.name, img: p.profile_path, role: p.character })))}
     ${rel ? `<div class="mi-h">Release</div><div class="mi-line">${rel}</div>` : ''}
     ${provHtml(prov)}
     ${parentsGuideHtml(cert, mDesc, d.imdb_id || c.imdb, d.title)}`;
 }
 
-/* ---------- search / add ---------- */
-let lastResults = [], searchSeq = 0;
+/* ---------- search / add ----------
+   One search box for titles, people and franchises. Results are grouped
+   Titles → Actors → Directors → Writers (incl. TV creators) → Franchises → Other people.
+   Tapping a person or franchise opens its page; titles there are added without leaving it. */
+let RES = [], searchSeq = 0; // every addable row on screen points into RES by index
+const PEOPLE_MAX = 5, FRANCHISE_MAX = 3, CREDITS_MAX = 200;
+const DEPT_GROUP = { Acting: 'act', Directing: 'dir', Writing: 'wri', Creator: 'wri' };
+const GROUPS = [['title', 'Titles'], ['act', 'Actors'], ['dir', 'Directors'], ['wri', 'Writers'], ['col', 'Franchises'], ['oth', 'Other people']];
+const DEPT_TABS = [['act', 'Acting'], ['dir', 'Directing'], ['wri', 'Writing']];
+const DEPT_NAME = { Acting: 'Actor', Directing: 'Director', Writing: 'Writer', Creator: 'Creator', Production: 'Producer' };
+const SELF_ROLE = /^(self|himself|herself|themselves|themself)\b/i; // talk shows, award shows, documentaries
+const TALK_GENRES = new Set([10767, 10763]); // TMDB genres: Talk, News
+const DIR_JOBS = /^(director|co-director|series director)$/i;
+const WRI_SKIP = /editor|consultant|researcher|coordinator|assistant/i;
+const PI = {}; // person and franchise pages, kept in memory only
+
 function openSearch() {
   if (!tmdbKey()) { toast('Add the TMDB key first (Settings → API keys)'); return; }
-  openPage('Add a title', () => `<div class="search"><input id="q" type="search" placeholder="Search TV shows and movies" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></div>
-    <div id="results"><p class="hint">Shows go to the Shows tab; movies and stand-up specials go to Movies.</p></div>`,
+  openPage('Add a title', () => `<div class="search"><input id="q" type="search" placeholder="Search titles, actors, directors" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></div>
+    <div id="results"><p class="hint">Search for a show, movie, actor, director, writer or franchise. Shows go to the Shows tab; movies and stand-up specials go to Movies.</p></div>`,
     { after: pg => { const q = pg.body.querySelector('#q'); q.focus(); q.addEventListener('input', debounce(() => doSearch(q.value, pg), 350)); q.addEventListener('keydown', e => { if (e.key === 'Enter') q.blur(); }); } });
 }
+
+const normQ = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function bigrams(s) { s = ' ' + normQ(s) + ' '; const m = new Map(); for (let i = 0; i < s.length - 1; i++) { const g = s.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); } return m; }
+function similarity(a, b) { // 0..1, how alike two names look (letter pairs in common)
+  const A = bigrams(a), B = bigrams(b); let inter = 0, n = 0;
+  for (const v of A.values()) n += v; for (const v of B.values()) n += v;
+  for (const [g, v] of A) if (B.has(g)) inter += Math.min(v, B.get(g));
+  return n ? 2 * inter / n : 0;
+}
+const nameOf = r => r.media_type === 'tv' || r.media_type === 'person' ? r.name : r.title;
+
+function groupResults(multi, cols) {
+  const g = { title: [], act: [], dir: [], wri: [], col: [], oth: [] };
+  for (const r of multi) {
+    if (r.adult) continue;
+    if (r.media_type === 'tv' || r.media_type === 'movie') g.title.push(r);
+    else if (r.media_type === 'person' && ((r.known_for || []).length || r.profile_path)) g[DEPT_GROUP[r.known_for_department] || 'oth'].push(r);
+  }
+  g.title = g.title.slice(0, 20);
+  for (const k of ['act', 'dir', 'wri', 'oth']) g[k] = g[k].slice(0, PEOPLE_MAX);
+  g.col = cols.filter(c => !c.adult).slice(0, FRANCHISE_MAX);
+  return g;
+}
+const countGroups = g => Object.values(g).reduce((n, a) => n + a.length, 0);
+
+/* Nothing found: try looser searches (shortened words, one word left out) and keep what looks close */
+async function closeMatches(q) {
+  const w = normQ(q).split(' ').filter(Boolean); if (!w.length) return [];
+  const vars = new Set();
+  vars.add(w.map(x => x.length > 3 ? x.slice(0, 3) : x).join(' '));
+  if (w.length === 1 && w[0].length > 3) vars.add(w[0].slice(0, 2));
+  if (w.length > 1) w.slice(0, 3).forEach((_, i) => vars.add(w.filter((__, j) => j !== i).join(' ')));
+  vars.delete(normQ(q)); vars.delete('');
+  const lists = await Promise.all([...vars].slice(0, 4).map(v => tmdb('/search/multi', { query: v, include_adult: 'false', language: 'en-US' }).then(j => j.results || []).catch(() => [])));
+  const seen = new Set(), out = [];
+  for (const r of lists.flat()) {
+    const k = r.media_type + ':' + r.id; if (seen.has(k) || !nameOf(r)) continue; seen.add(k);
+    const sc = similarity(q, nameOf(r)); if (sc >= 0.45) out.push([sc, r]);
+  }
+  return out.sort((a, b) => b[0] - a[0] || (b[1].popularity || 0) - (a[1].popularity || 0)).slice(0, 12).map(x => x[1]);
+}
+
 async function doSearch(q, pg) {
   q = q.trim(); const box = pg.body.querySelector('#results'); const seq = ++searchSeq;
   if (q.length < 2) { box.innerHTML = '<p class="hint">Keep typing…</p>'; return; }
   box.innerHTML = '<p class="hint">Searching…</p>';
   try {
-    const j = await tmdb('/search/multi', { query: q, include_adult: 'false', language: 'en-US' });
+    const [multi, cols] = await Promise.all([
+      tmdb('/search/multi', { query: q, include_adult: 'false', language: 'en-US' }),
+      tmdb('/search/collection', { query: q, include_adult: 'false', language: 'en-US' }).catch(() => ({ results: [] })) // franchises are extra; never fail the search over them
+    ]);
     if (seq !== searchSeq) return;
-    lastResults = (j.results || []).filter(r => r.media_type === 'tv' || r.media_type === 'movie').slice(0, 20);
-    if (!lastResults.length) { box.innerHTML = '<p class="hint">No matches. Try a different spelling.</p>'; return; }
-    renderResults(box);
+    let g = groupResults(multi.results || [], cols.results || []), close = false;
+    if (!countGroups(g)) {
+      box.innerHTML = '<p class="hint">No exact matches. Looking for close ones…</p>';
+      const near = await closeMatches(q);
+      if (seq !== searchSeq) return;
+      g = groupResults(near, []); close = true;
+    }
+    if (!countGroups(g)) { box.innerHTML = '<p class="hint">No matches. Try a different spelling.</p>'; return; }
+    box.innerHTML = (close ? `<p class="hint">No exact matches for “${esc(q)}”. Close matches:</p>` : '') + groupsHtml(g);
   } catch (e) { if (seq === searchSeq) box.innerHTML = '<p class="hint">Search failed — see the red box.</p>'; problem('Search', e); }
 }
-function renderResults(box) {
-  const p = prof();
-  box.innerHTML = lastResults.map((r, i) => {
-    const tv = r.media_type === 'tv', title = tv ? r.name : r.title, yr = ((tv ? r.first_air_date : r.release_date) || '').slice(0, 4);
-    const inList = (tv ? p.shows : p.movies).some(x => x.id === r.id);
-    return `<button class="res" data-act="addRes" data-i="${i}">${posterHtml(r.poster_path, title, 'w92')}<span class="rt2"><b>${esc(title)}</b><small><span class="tp">${tv ? 'TV' : 'MOVIE'}</span>${esc(yr)}</small></span>${inList ? '<span class="inl">✓ In list</span>' : ''}</button>`;
-  }).join('');
+function groupsHtml(g) {
+  return GROUPS.filter(([k]) => g[k].length).map(([k, label]) => `<div class="rsec">${label}</div>` +
+    g[k].map(r => k === 'title' ? resRow(r) : k === 'col' ? colRow(r) : personRow(r)).join('')).join('');
 }
-async function addResult(r) {
+const yearOf = r => ((r.media_type === 'tv' ? r.first_air_date : r.release_date) || '').slice(0, 4);
+const faceHtml = (path, name) => path ? `<img class="face" src="${IMG}w185${esc(path)}" alt="" loading="lazy" draggable="false">`
+  : `<div class="face ph">${esc((name || '?').trim().charAt(0).toUpperCase())}</div>`;
+function resRow(r, note, stay) { // a title; tapping adds it
+  const tv = r.media_type === 'tv', title = nameOf(r), p = prof();
+  const inList = (tv ? p.shows : p.movies).some(x => x.id === r.id);
+  const i = RES.push(r) - 1;
+  return `<button class="res" data-act="addRes" data-i="${i}"${stay ? ' data-stay="1"' : ''}>${posterHtml(r.poster_path, title, 'w92')}<span class="rt2"><b>${esc(title)}</b><small><span class="tp">${tv ? 'TV' : 'MOVIE'}</span>${esc(yearOf(r))}${note ? `${yearOf(r) ? ' · ' : ''}${esc(note)}` : ''}</small></span>${inList ? '<span class="inl">✓ In list</span>' : ''}</button>`;
+}
+function personRow(r) {
+  const kf = (r.known_for || []).filter(k => !k.adult).map(nameOf).filter(Boolean).slice(0, 2).join(', ');
+  return `<button class="res" data-act="person" data-id="${r.id}">${faceHtml(r.profile_path, r.name)}<span class="rt2"><b>${esc(r.name)}</b><small>${kf ? 'Known for ' + esc(kf) : esc(DEPT_NAME[r.known_for_department] || r.known_for_department || '')}</small></span><span class="chev">›</span></button>`;
+}
+function colRow(r) {
+  return `<button class="res" data-act="franchise" data-id="${r.id}">${posterHtml(r.poster_path, r.name, 'w92')}<span class="rt2"><b>${esc(r.name)}</b><small><span class="tp">FRANCHISE</span>See all the movies</small></span><span class="chev">›</span></button>`;
+}
+
+/* Person page: their titles split into Acting / Directing / Writing, most popular first */
+async function openPerson(id, onBack) {
+  id = +id; const k = 'p:' + id, state = { tab: null, all: false };
+  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => personHtml(k, state), { live: true, after: p => { p.state = state; } });
+  pg.onBack = onBack;
+  if (!PI[k]) {
+    try { PI[k] = await tmdb(`/person/${id}`, { append_to_response: 'combined_credits', language: 'en-US' }); }
+    catch (e) { problem('Person', e); if (pageStack[pageStack.length - 1] === pg) closePage(); return; }
+  }
+  if (pageStack.includes(pg)) { pg.el.querySelector('.pt').textContent = PI[k].name || ''; pg.render(); }
+}
+function personCredits(d) {
+  if (d._cr) return d._cr;
+  const cc = d.combined_credits || {}, b = { act: new Map(), dir: new Map(), wri: new Map() };
+  const put = (bk, r, note, hide) => {
+    const key = r.media_type + ':' + r.id, x = b[bk].get(key);
+    if (x) { if (note && !x._notes.includes(note)) x._notes.push(note); x._hide = x._hide && hide; x._eps += r.episode_count || 0; }
+    else b[bk].set(key, Object.assign({}, r, { _notes: note ? [note] : [], _hide: hide, _eps: r.episode_count || 0 }));
+  };
+  const ok = r => (r.media_type === 'tv' || r.media_type === 'movie') && !r.adult;
+  const talk = r => (r.genre_ids || []).some(g => TALK_GENRES.has(g));
+  for (const r of cc.cast || []) if (ok(r)) put('act', r, r.character ? 'as ' + r.character.replace(/\s*\(voice\)/i, ' (voice)') : '', SELF_ROLE.test((r.character || '').trim()) || talk(r));
+  for (const r of cc.crew || []) {
+    if (!ok(r)) continue;
+    if (r.department === 'Directing' && DIR_JOBS.test(r.job || '')) put('dir', r, '', talk(r));
+    else if ((r.department === 'Writing' && !WRI_SKIP.test(r.job || '')) || r.department === 'Creator') put('wri', r, r.job || '', talk(r));
+  }
+  const pop = (x, y) => (y.popularity || 0) - (x.popularity || 0) || (y.vote_count || 0) - (x.vote_count || 0);
+  const out = {};
+  for (const bk of Object.keys(b)) out[bk] = [...b[bk].values()].sort(pop);
+  return (d._cr = out);
+}
+function personHtml(k, st) {
+  const d = PI[k]; if (!d) return '<p class="hint" style="padding-top:16px">Loading…</p>';
+  const cr = personCredits(d), vis = bk => cr[bk].filter(x => st.all || !x._hide);
+  const tabs = DEPT_TABS.filter(([bk]) => cr[bk].length);
+  if (!st.tab || !cr[st.tab].length) {
+    const pref = DEPT_GROUP[d.known_for_department];
+    st.tab = (pref && vis(pref).length && pref) || (tabs.find(([bk]) => vis(bk).length) || tabs[0] || ['act'])[0];
+  }
+  const born = d.birthday ? (d.deathday ? `${d.birthday.slice(0, 4)}–${d.deathday.slice(0, 4)}` : `Born ${d.birthday.slice(0, 4)}`) : '';
+  const head = `<div class="phead">${faceHtml(d.profile_path, d.name)}<div><b>${esc(d.name)}</b><small>${esc([DEPT_NAME[d.known_for_department] || d.known_for_department, born].filter(Boolean).join(' · '))}</small></div></div>`;
+  if (!tabs.length) return head + '<p class="hint">TMDB lists no shows or movies for this person.</p>';
+  const chips = tabs.map(([bk, l]) => `<button class="${bk === st.tab ? 'on' : ''}" data-act="perTab" data-t="${bk}">${l} ${vis(bk).length}</button>`).join('');
+  const rows = vis(st.tab), hidden = cr[st.tab].filter(x => x._hide).length;
+  const note = x => [x._notes.join(', '), x.media_type === 'tv' && x._eps ? `${x._eps} ep${x._eps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+  return head + `<div class="chips pchips">${chips}</div>` +
+    (rows.length ? rows.slice(0, CREDITS_MAX).map(x => resRow(x, note(x), true)).join('') : '<p class="hint">Only talk-show and other appearances as themselves.</p>') +
+    (rows.length > CREDITS_MAX ? `<p class="hint">Showing the ${CREDITS_MAX} most popular.</p>` : '') +
+    (hidden ? `<button class="linkb" data-act="perAll">${st.all ? 'Hide' : 'Show'} ${hidden} talk-show and self appearance${hidden > 1 ? 's' : ''}</button>` : '');
+}
+
+/* Franchise page: every movie in the series, in release order */
+async function openFranchise(id) {
+  id = +id; const k = 'c:' + id;
+  const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => franchiseHtml(k), { live: true });
+  if (!PI[k]) {
+    try { PI[k] = await tmdb(`/collection/${id}`, { language: 'en-US' }); }
+    catch (e) { problem('Franchise', e); if (pageStack[pageStack.length - 1] === pg) closePage(); return; }
+  }
+  if (pageStack.includes(pg)) { pg.el.querySelector('.pt').textContent = PI[k].name || ''; pg.render(); }
+}
+function franchiseParts(d) {
+  return (d.parts || []).filter(x => !x.adult).map(x => Object.assign({}, x, { media_type: 'movie' }))
+    .sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
+}
+function franchiseHtml(k) {
+  const d = PI[k]; if (!d) return '<p class="hint" style="padding-top:16px">Loading…</p>';
+  const parts = franchiseParts(d), p = prof(), missing = parts.filter(x => !p.movies.some(m => m.id === x.id));
+  return `<p class="note" style="margin:12px 18px 10px">${parts.length} movie${parts.length === 1 ? '' : 's'}, in release order. Tap one to add it.</p>` +
+    (missing.length > 1 ? `<div style="margin:0 16px 10px"><button class="btn sm ghost" data-act="addAllCol" data-k="${k}">Add all ${missing.length} that aren't in your list</button></div>` : '') +
+    parts.map(x => resRow(x, x.release_date && x.release_date > today() ? 'Coming ' + fmtDate(x.release_date, false) : '', true)).join('');
+}
+
+/* Adding titles */
+function addItem(r) { // puts a search result into the list; returns the new item, or null if it's already there
   const p = prof(), tv = r.media_type === 'tv', list = tv ? p.shows : p.movies;
-  if (list.some(x => x.id === r.id)) { toast('Already in your list'); return; }
-  const base = { id: r.id, title: tv ? r.name : r.title, poster: r.poster_path || null, year: ((tv ? r.first_air_date : r.release_date) || '').slice(0, 4),
+  if (list.some(x => x.id === r.id)) return null;
+  const base = { id: r.id, title: nameOf(r), poster: r.poster_path || null, year: yearOf(r),
     rank: !list.length ? 1 : D.settings.newAt === 'bottom' ? Math.max(...list.map(x => x.rank)) + 1 : Math.min(...list.map(x => x.rank)) - 1, added: today() };
   const item = tv ? Object.assign(base, { pos: null, sp: [], arch: false, archOn: null })
     : Object.assign(base, { seen: false, seenOn: null, streaming: null, newly: null });
-  list.push(item); normalizeRanks(list); save();
-  while (pageStack.length) closePage();
+  list.push(item); normalizeRanks(list);
+  return item;
+}
+async function loadNew(item, tv) { // fetch details for a just-added title
+  if (tv) await fetchTV(item.id, true); else await fetchMovie(item.id);
+  const key = (tv ? 'tv:' : 'movie:') + item.id;
+  if (!tv) { item.streaming = C[key].providers.length > 0; }
+  saveCache(); save(); render(); renderPicker();
+  if (ratingsOn()) { try { await fetchRatings(key); saveCache(); render(); } catch (e) { problem('Ratings', e); } }
+}
+async function addResult(r, stay) {
+  const tv = r.media_type === 'tv', item = addItem(r);
+  if (!item) { toast('Already in your list'); return; }
   D.tab = tv ? 'shows' : 'movies'; save();
+  if (!stay) while (pageStack.length) closePage();
   render(); window.scrollTo(0, 0);
-  if (tv) openPicker(item.id); else toast(`Added to Movies`);
-  try {
-    if (tv) await fetchTV(item.id, true); else await fetchMovie(item.id);
-    const key = (tv ? 'tv:' : 'movie:') + item.id;
-    if (!tv) { item.streaming = C[key].providers.length > 0; }
-    saveCache(); save(); render(); renderPicker();
-    if (ratingsOn()) { try { await fetchRatings(key); saveCache(); render(); } catch (e) { problem('Ratings', e); } }
-  } catch (e) { problem(`Adding "${item.title}"`, e); if (picker && picker.id === item.id) closeSheet(); render(); }
+  if (tv) openPicker(item.id); else toast(stay ? `Added “${item.title}” to Movies` : 'Added to Movies');
+  try { await loadNew(item, tv); }
+  catch (e) { problem(`Adding "${item.title}"`, e); if (picker && picker.id === item.id) closeSheet(); render(); }
+}
+async function addAllFranchise(k) {
+  const d = PI[k]; if (!d) return;
+  let parts = franchiseParts(d);
+  if (D.settings.newAt !== 'bottom') parts = parts.reverse(); // so the first movie ends up highest
+  const items = parts.map(addItem).filter(Boolean);
+  if (!items.length) { toast('All of them are already in your list'); return; }
+  D.tab = 'movies'; save(); render(); window.scrollTo(0, 0);
+  toast(`Added ${items.length} movies`);
+  await pool(items, 3, it => loadNew(it, false), it => `Adding "${it.title}"`);
 }
 
 /* ---------- settings ---------- */
@@ -1465,6 +1660,9 @@ function settingsHtml() {
   ${['tv', 'movie'].map(kind => `<h3>${kind === 'tv' ? 'TV list' : 'Movie list'} shows</h3><div class="group">
     ${VIEW_OPTS[kind].map(([k, label]) => `<button class="gi" data-act="viewTog" data-kind="${kind}" data-k="${k}"><span class="sl">${label}</span><span class="sw ${V(kind, k) ? 'on' : ''}"></span></button>`).join('')}</div>`).join('')}
   <p class="note">Title, the episode line (TV) and the +1 / Seen button always show. Everything is on each title's details page.</p>
+  <h3>TV episode line shows</h3>
+  <div class="seg">${EP_LINE.map(([v, l]) => `<button class="${D.settings.epLine === v ? 'on' : ''}" data-act="epLine" data-v="${v}">${l}</button>`).join('')}</div>
+  <p class="note">${{ behind: 'Your episode and how many are left: “S3E7 · 2 behind”.', last: 'The last episode you watched: “Last watched S3E7”.', next: 'The episode to watch next: “Next: S3E8”.' }[D.settings.epLine]} Caught-up shows always say “S3E7 · Up to date”.</p>
   <h3>Details pages</h3>
   <div class="seg">${[[true, 'Parents guide on'], [false, 'Off']].map(([v, l]) => `<button class="${!!D.settings.pg === v ? 'on' : ''}" data-act="pg" data-v="${v ? 1 : 0}">${l}</button>`).join('')}</div>
   <p class="note">Adds the age rating, what it means, and links to IMDb's and Common Sense Media's parents guides at the bottom of each details page.</p>
@@ -1628,12 +1826,21 @@ const ACT = {
   forceRefresh() { refresh({ force: true }); },
   add() { openSearch(); },
   settings() { while (sheetStack.length) closeSheet(); openSettings(); },
-  back() { closePage(); },
+  back() { const pg = pageStack[pageStack.length - 1]; closePage(); if (pg && pg.onBack) pg.onBack(); },
   closeSheet() { closeSheet(); },
   profiles() { profilesSheet(); },
   archive() { openArchive(); },
   seenList() { openSeen(); },
-  addRes(b) { const r = lastResults[+b.dataset.i]; if (r) addResult(r); },
+  addRes(b) { const r = RES[+b.dataset.i]; if (r) return addResult(r, !!b.dataset.stay); },
+  person(b) {
+    // from a details sheet: close it, open the person, and bring the sheet back on Back
+    if (b.closest('.sheet-wrap') && infoSheet) { const [type, id] = infoSheet.k.split(':'); while (sheetStack.length) closeSheet(); return openPerson(b.dataset.id, () => openInfo(type, id)); }
+    return openPerson(b.dataset.id);
+  },
+  franchise(b) { return openFranchise(b.dataset.id); },
+  perTab(b) { const pg = pageStack[pageStack.length - 1]; pg.state.tab = b.dataset.t; pg.render(); pg.scroller.scrollTop = 0; },
+  perAll() { const pg = pageStack[pageStack.length - 1]; pg.state.all = !pg.state.all; pg.render(); },
+  addAllCol(b) { return addAllFranchise(b.dataset.k); },
 
   picker(b) { openPicker(b.dataset.id); },
   pkSeason(b) { picker.season = +b.dataset.s; renderPicker(); picker.sh.el.parentElement.scrollTop = 0; },
@@ -1718,6 +1925,7 @@ const ACT = {
   viewTog(b) { const v = D.settings.view[b.dataset.kind]; v[b.dataset.k] = !v[b.dataset.k]; save(); rerenderSettings(); render(); },
   pg(b) { D.settings.pg = b.dataset.v === '1'; save(); rerenderSettings(); },
   newAt(b) { D.settings.newAt = b.dataset.v; save(); rerenderSettings(); },
+  epLine(b) { D.settings.epLine = b.dataset.v; save(); render(); rerenderSettings(); },
   win(b) { D.settings.win = +b.dataset.v; save(); render(); rerenderSettings(); },
   saveKeys() {
     D.settings.tmdbKey = ($('#kT').value || '').trim(); D.settings.omdbKey = ($('#kO').value || '').trim(); D.settings.mdbKey = ($('#kM').value || '').trim(); save();
