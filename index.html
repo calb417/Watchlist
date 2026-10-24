@@ -310,6 +310,7 @@ input[type=text], input[type=search], input[type=password] { width: 100%; font-s
 /* Rank pages */
 .rrow .card { padding: 5px 6px 5px 10px; gap: 10px; cursor: default; }
 .rnum { flex: none; min-width: 38px; height: 36px; border-radius: 10px; border: 0; background: var(--chip); font-weight: 700; font-size: 15px; }
+.rnum.s { display: grid; place-items: center; }
 .rrow .poster { width: 33px; height: 50px; border-radius: 6px; font-size: 14px; }
 .rtt { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .handle { flex: none; width: 44px; height: 44px; display: grid; place-items: center; color: var(--sub); touch-action: none; }
@@ -375,7 +376,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.8.5';
+const APP_VERSION = '1.8.6';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -422,10 +423,12 @@ function fmtRun(m) { if (!m) return ''; return m >= 60 ? `${Math.floor(m / 60)}h
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { problem('Reading saved data', e); return null; } }
 let D = load(LS_DATA);
 if (!D || typeof D !== 'object' || !Array.isArray(D.profiles)) D = { profiles: [], active: null, tab: 'shows', lastRefresh: 0 };
-D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false, epLine: 'last' }, D.settings || {});
-/* Episode line on TV cards (Settings): 'behind' = S3E7 · 2 behind, 'last' = Last watched S3E7, 'next' = Next: S3E8 */
+D.settings = Object.assign({ win: 14, tmdbKey: '', omdbKey: '', mdbKey: '', ghToken: '', newAt: 'top', pg: false, epLine: 'behind' }, D.settings || {});
+/* Episode line on TV cards (Settings): 'behind' = S3E7 · 2 behind (default), 'last' = Last watched S3E7, 'next' = Next: S3E8 */
 const EP_LINE = [['behind', 'Behind'], ['last', 'Last watched'], ['next', 'Next up']];
-if (!EP_LINE.some(([v]) => v === D.settings.epLine)) D.settings.epLine = 'last';
+if (!EP_LINE.some(([v]) => v === D.settings.epLine)) D.settings.epLine = 'behind';
+// 1.8.6: Behind is the default again (1.8.0–1.8.5 defaulted to Last watched)
+if (D.settings.epLineVer !== 2) { D.settings.epLine = 'behind'; D.settings.epLineVer = 2; }
 /* What each list's cards show (Settings → List view). Third value = default. */
 const VIEW_OPTS = {
   tv: [['poster', 'Poster', 1], ['year', 'Year', 1], ['rt', 'Rotten Tomatoes 🍅', 0], ['pop', 'Popcornmeter 🍿', 0], ['imdb', 'IMDb rating', 0],
@@ -1675,6 +1678,7 @@ function settingsHtml() {
   <h3>Profiles</h3><div class="group">
     ${D.profiles.map(pr => `<div class="gi"><button class="gl" data-act="switchProf" data-id="${pr.id}">${pr.id === p.id ? '✓ ' : ''}${esc(pr.name)}<small>${pr.shows.length} shows · ${pr.movies.length} movies</small></button>
       <button class="mini" data-act="renameProf" data-id="${pr.id}">Rename</button><button class="mini danger" data-act="delProf" data-id="${pr.id}">Delete</button></div>`).join('')}
+    ${D.profiles.length > 1 ? '<button class="gi" data-act="reorderProf">Reorder profiles<span class="chev">›</span></button>' : ''}
     <button class="gi add" data-act="addProf">+ Add profile</button></div>
   <h3>Backup</h3><div class="group">
     <button class="gi" data-act="export">Export “${esc(p.name)}” backup<span class="chev">›</span></button>
@@ -1747,6 +1751,21 @@ function openRank(kind) {
     live: true,
     right: () => `<button data-act="rankAll">${state.all ? 'Hide' : 'Show'} ${isTv ? 'archived' : 'seen'}</button>`,
     after: pg => { pg.state = state; pg.body.querySelectorAll('.list').forEach(l => attachGestures(l, { sortable: true, handleSel: '.handle', swipe: false, scroller: pg.scroller, onReorder })); }
+  });
+}
+
+/* ---------- reorder profiles (order is per phone; used in Settings and the profile menu) ---------- */
+function openProfOrder() {
+  openPage('Reorder profiles', () => `<p class="note" style="margin:12px 18px 10px">Drag the ≡ handle. This order is used here in Settings and in the profile menu at the top.</p>
+    <div class="list" data-kind="prof">${D.profiles.map((pr, i) => `<div class="row rrow" data-id="${esc(pr.id)}"><div class="card"><span class="rnum s">${i + 1}</span>
+      <div class="rtt">${esc(pr.name)}${pr.id === D.active ? '<span class="tag">Current</span>' : ''}</div>
+      <div class="handle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg></div></div></div>`).join('')}</div>`, {
+    after: pg => pg.body.querySelectorAll('.list').forEach(l => attachGestures(l, { sortable: true, handleSel: '.handle', swipe: false, scroller: pg.scroller,
+      onReorder: ids => {
+        const next = ids.map(id => D.profiles.find(p => String(p.id) === id)).filter(Boolean);
+        if (next.length === D.profiles.length) { D.profiles = next; save(); }
+        pg.render(); rerenderSettings(); render();
+      } }))
   });
 }
 
@@ -1862,6 +1881,7 @@ const ACT = {
   archive() { openArchive(); },
   seenList() { openSeen(); },
   closeAll() { closeAll(); },
+  reorderProf() { openProfOrder(); },
   resInfo(b) { return openInfo(b.dataset.type, b.dataset.id); },
   addRes(b) { const r = RES[+b.dataset.i]; if (r) return addResult(r, !!b.dataset.stay); },
   person(b) {
