@@ -374,7 +374,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -1523,7 +1523,7 @@ function colRow(r) {
   return `<button class="res" data-act="franchise" data-id="${r.id}">${posterHtml(r.poster_path, r.name, 'w92')}<span class="rt2"><b>${esc(r.name)}</b><small><span class="tp">FRANCHISE</span>See all the movies</small></span><span class="chev">›</span></button>`;
 }
 
-/* Person page: their titles split into Acting / Directing / Writing, most popular first */
+/* Person page: their titles split into Acting / Directing / Writing, newest first (undated ones last) */
 async function openPerson(id, onBack) {
   id = +id; const k = 'p:' + id, state = { tab: null, all: false };
   const pg = openPage((PI[k] && PI[k].name) || 'Loading…', () => personHtml(k, state), { live: true, after: p => { p.state = state; } });
@@ -1550,9 +1550,11 @@ function personCredits(d) {
     if (r.department === 'Directing' && DIR_JOBS.test(r.job || '')) put('dir', r, '', talk(r));
     else if ((r.department === 'Writing' && !WRI_SKIP.test(r.job || '')) || r.department === 'Creator') put('wri', r, r.job || '', talk(r));
   }
-  const pop = (x, y) => (y.popularity || 0) - (x.popularity || 0) || (y.vote_count || 0) - (x.vote_count || 0);
+  // TV: when they first appeared in it if TMDB has that, else when the show started
+  const when = x => x.first_credit_air_date || (x.media_type === 'tv' ? x.first_air_date : x.release_date) || '';
+  const recent = (x, y) => (!when(x) - !when(y)) || when(y).localeCompare(when(x)) || (y.popularity || 0) - (x.popularity || 0);
   const out = {};
-  for (const bk of Object.keys(b)) out[bk] = [...b[bk].values()].sort(pop);
+  for (const bk of Object.keys(b)) out[bk] = [...b[bk].values()].sort(recent);
   return (d._cr = out);
 }
 function personHtml(k, st) {
@@ -1571,7 +1573,7 @@ function personHtml(k, st) {
   const note = x => [x._notes.join(', '), x.media_type === 'tv' && x._eps ? `${x._eps} ep${x._eps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
   return head + `<div class="chips pchips">${chips}</div>` +
     (rows.length ? rows.slice(0, CREDITS_MAX).map(x => resRow(x, note(x), true)).join('') : '<p class="hint">Only talk-show and other appearances as themselves.</p>') +
-    (rows.length > CREDITS_MAX ? `<p class="hint">Showing the ${CREDITS_MAX} most popular.</p>` : '') +
+    (rows.length > CREDITS_MAX ? `<p class="hint">Showing the ${CREDITS_MAX} most recent.</p>` : '') +
     (hidden ? `<button class="linkb" data-act="perAll">${st.all ? 'Hide' : 'Show'} ${hidden} talk-show and self appearance${hidden > 1 ? 's' : ''}</button>` : '');
 }
 
