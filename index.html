@@ -231,13 +231,16 @@ body.welcome { padding-top: 0; }
 .cert { display: inline-block; border: 1.5px solid currentColor; border-radius: 4px; padding: 0 4px; font-size: 11.5px; font-weight: 700; color: var(--text); line-height: 1.5; }
 .mi-rate { display: flex; gap: 10px; align-items: center; margin-top: 6px; font-size: 14px; }
 .mi-rate .im b { background: #f5c518; color: #000; font-size: 10.5px; padding: 1px 4px; border-radius: 4px; margin-right: 3px; }
-.tagline { font-style: italic; color: var(--sub); margin: 4px 0 8px; font-size: 15px; }
+.tagline { font-style: italic; color: var(--sub); margin: 16px 0 8px; font-size: 15px; }
 .mi-ov { font-size: 15px; line-height: 1.5; margin: 0 0 6px; }
+.tagline + .mi-ov { margin-top: 0; }
+.mi-prov + .mi-ov, .mi-line + .mi-ov, .mi-rb + .mi-ov { margin-top: 16px; }
 .mi-h { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sub); margin: 16px 0 6px; }
 .mi-line { font-size: 15px; }
 .cast { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .cast::-webkit-scrollbar { display: none; }
-.cast .pp { flex: none; width: 78px; text-align: center; font-size: 12.5px; line-height: 1.3; border: 0; background: none; padding: 0; color: var(--text); }
+.cast { align-items: flex-start; }
+.cast .pp { flex: none; width: 78px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; font-size: 12.5px; line-height: 1.3; border: 0; background: none; padding: 0; color: var(--text); }
 .plink { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); }
 .cast img, .cast .noimg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--chip); display: block; margin: 0 auto 5px; }
 .cast b { display: block; font-weight: 600; }
@@ -245,6 +248,16 @@ body.welcome { padding-top: 0; }
 .mi-prov { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .mi-prov span { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .mi-prov img { width: 26px; height: 26px; border-radius: 6px; }
+.mi-rb { margin-top: 6px; line-height: 1.55; }
+.mi-add { width: auto; display: inline-block; margin-top: 10px; padding: 8px 14px; font-size: 14.5px; }
+.mi-inl { margin-top: 10px; color: var(--good); font-size: 14px; font-weight: 700; }
+.infoback { display: block; border: 0; background: none; color: var(--accent); font-size: 15px; font-weight: 600; padding: 0 44px 10px 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.sim { display: flex; gap: 10px; overflow-x: auto; align-items: flex-start; padding-bottom: 4px; scrollbar-width: none; }
+.sim::-webkit-scrollbar { display: none; }
+.sim .sp { flex: none; width: 84px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; border: 0; background: none; padding: 0; color: var(--text); font-size: 12.5px; line-height: 1.3; }
+.sim .poster { width: 84px; height: 126px; border-radius: 8px; object-fit: cover; margin-bottom: 5px; }
+.sim b { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sim small { color: var(--sub); }
 .pglinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .pglink { background: var(--chip); color: var(--text); text-decoration: none; border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 600; }
 .ep .n { flex: none; width: 46px; font-weight: 700; }
@@ -376,7 +389,7 @@ const OMDB_KEY = '1f15fc7f';
 const MDBLIST_KEY = 'sgd6flad1fkhk0zyer4att5oo';
 /* ===================================================================== */
 
-const APP_VERSION = '1.8.6';
+const APP_VERSION = '1.9.0';
 window.APP_VERSION = APP_VERSION;
 const REGION = 'US';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -389,7 +402,9 @@ try { localStorage.removeItem('watchlist.cache.v1'); } catch (e) { /* ignore */ 
 // Live-TV bundles never shown
 const LIVE_TV = /\b(fubo\w*|youtube ?tv|sling tv|direc ?tv\w*|philo|hulu (\+ )?live\w*|spectrum\w*|xfinity\w*|optimum\w*|fios\w*|frndly\w*|vidgo)\b/i;
 // Free / ad-supported services: shown only when the title is on no paid subscription
-const FREE_SVC = /\b(pluto|tubi|roku channel|freevee|plex|crackle|kanopy|hoopla|xumo|filmrise|popcornflix|shout! factory|fandango at home free|vudu free|fawesome|cineverse|sling freestream)\b/i;
+/* Library services (free with a library card): shown only when no paid subscription has the title, but ahead of the free ad apps */
+const LIBRARY_SVC = /\b(kanopy|hoopla)\b/i;
+const FREE_SVC = /\b(pluto|tubi|roku channel|freevee|plex|crackle|xumo|filmrise|popcornflix|shout! factory|fandango at home free|vudu free|fawesome|cineverse|sling freestream)\b/i;
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -434,7 +449,7 @@ const VIEW_OPTS = {
   tv: [['poster', 'Poster', 1], ['year', 'Year', 1], ['rt', 'Rotten Tomatoes 🍅', 0], ['pop', 'Popcornmeter 🍿', 0], ['imdb', 'IMDb rating', 0],
     ['runtime', 'Runtime per episode', 0], ['service', 'Streaming service', 0], ['next', 'Next episode date', 0], ['ended', '“Ended” tag', 1]],
   movie: [['poster', 'Poster', 1], ['year', 'Year', 1], ['runtime', 'Runtime', 1], ['rt', 'Rotten Tomatoes 🍅', 1], ['pop', 'Popcornmeter 🍿', 1],
-    ['imdb', 'IMDb rating', 0], ['service', 'Streaming service', 0], ['upcoming', 'Upcoming release date', 1]]
+    ['imdb', 'IMDb rating', 0], ['service', 'Streaming service', 0], ['upcoming', 'Release date / rent & buy', 1]]
 };
 D.settings.view = D.settings.view || {};
 for (const kind of ['tv', 'movie']) { const v = D.settings.view[kind] = D.settings.view[kind] || {}; for (const [k, , def] of VIEW_OPTS[kind]) if (typeof v[k] !== 'boolean') v[k] = !!def; }
@@ -683,10 +698,18 @@ async function pool(items, n, fn, label) {
 }
 
 /* Raw TMDB/JustWatch lists are cached; the rules below run every time, so rule changes apply at once */
-function rawProv(wp) {
+function rawProv(wp, withRentBuy) {
   const us = wp && wp.results && wp.results[REGION];
   const pick = list => (list || []).map(p => ({ id: p.provider_id, n: p.provider_name, l: p.logo_path, p: p.display_priority ?? 99 }));
-  return us ? { sub: pick(us.flatrate), free: [...pick(us.free), ...pick(us.ads)] } : { sub: [], free: [] };
+  const out = us ? { sub: pick(us.flatrate), free: [...pick(us.free), ...pick(us.ads)] } : { sub: [], free: [] };
+  if (withRentBuy) { out.rent = us ? pick(us.rent).slice(0, 8) : []; out.buy = us ? pick(us.buy).slice(0, 8) : []; }
+  return out;
+}
+/* Rent / buy store names, plain and one per brand: "Apple TV", "Prime Video", "Fandango at Home" */
+function storeNames(list) {
+  const seen = new Set();
+  return (list || []).slice().sort((a, b) => a.p - b.p).map(p => shortName(p.n).replace(/^Amazon Video$/i, 'Prime Video').replace(/^Apple TV Store$/i, 'Apple TV'))
+    .filter(n => !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
 }
 const isChannel = n => /\b(amazon|apple tv|roku premium) channel\b/i.test(n);
 function brandOf(n) {
@@ -723,11 +746,13 @@ function shortName(n) {
 }
 function provs(pv) {
   if (!pv) return [];
-  const all = [...(pv.sub || []).map(p => Object.assign({ free: FREE_SVC.test(p.n) }, p)), ...(pv.free || []).map(p => Object.assign({}, p, { free: true }))]
+  // tier 0 = paid subscription, 1 = library (Kanopy, Hoopla), 2 = free with ads; only the best tier present is shown
+  const tier = (p, free) => LIBRARY_SVC.test(p.n) ? 1 : free || FREE_SVC.test(p.n) ? 2 : 0;
+  const all = [...(pv.sub || []).map(p => Object.assign({ t: tier(p, false) }, p)), ...(pv.free || []).map(p => Object.assign({}, p, { t: tier(p, true) }))]
     .filter(p => !LIVE_TV.test(p.n));
-  const paid = all.filter(p => !p.free);
+  const best = Math.min(3, ...all.map(p => p.t));
   const seen = new Set();
-  return cheapestPerBrand(paid.length ? paid : all).map(p => ({ n: shortName(p.n), l: p.l }))
+  return cheapestPerBrand(all.filter(p => p.t === best)).map(p => ({ n: shortName(p.n), l: p.l }))
     .filter(p => !seen.has(p.n.toLowerCase()) && seen.add(p.n.toLowerCase()));
 }
 
@@ -788,7 +813,7 @@ async function fetchMovie(id) {
   const dt = usDates(d.release_dates);
   C[key] = {
     type: 'movie', id, title: d.title, year: (d.release_date || '').slice(0, 4), poster: d.poster_path || null,
-    runtime: d.runtime || null, imdb: d.imdb_id || null, pv: rawProv(d['watch/providers']),
+    runtime: d.runtime || null, imdb: d.imdb_id || null, pv: rawProv(d['watch/providers'], true),
     release: d.release_date || '', th: dt.th, dig: dt.dig, detailsAt: today(),
     ratings: prev ? prev.ratings : null, ratingsAt: prev ? prev.ratingsAt : null
   };
@@ -948,8 +973,13 @@ function movieState(m) {
   if (m.newly) return { sec: 'new', html: `<span class="badge">Now on ${esc(shortName(m.newly.name))}</span>` };
   if (c.providers.length) return { sec: 'now', html: '' };
   const t = today();
-  // only upcoming dates on the card; past dates live in the details sheet
-  const up = c.th && c.th > t ? `Theaters ${fmtDate(c.th, false)}` : c.dig && c.dig > t ? `Digital ${fmtDate(c.dig, false)}` : c.release && c.release > t ? `Out ${fmtDate(c.release, false)}` : '';
+  // what's next for a movie that isn't streaming: theaters, then rent/buy (now, or its date)
+  const rent = !!(c.pv && c.pv.rent && c.pv.rent.length), buy = !!(c.pv && c.pv.buy && c.pv.buy.length);
+  const up = c.th && c.th > t ? `Theaters ${fmtDate(c.th, false)}`
+    : rent || buy ? (rent && buy ? 'Rent or buy now' : buy ? 'Buy now' : 'Rent now')
+    : c.dig && c.dig > t ? `Rent/buy ${fmtDate(c.dig, false)}`
+    : c.release && c.release > t ? `Out ${fmtDate(c.release, false)}`
+    : c.th && daysBetween(c.th, t) <= 120 ? 'In theaters' : '';
   return { sec: 'not', html: up && V('movie', 'upcoming') ? `<span class="dim">${up}</span>` : '' };
 }
 
@@ -1316,18 +1346,19 @@ function renderPicker() {
 
 /* ---------- details sheets for movies and shows (fetched on demand, kept in memory only) ---------- */
 const MI = {};
-let infoSheet = null;
-async function openInfo(type, id) {
+/* A details sheet keeps its own history: tapping a "More like this" title shows it in the same sheet, with ‹ Back to the one before */
+async function openInfo(type, id, sh) {
   id = +id; const k = type + ':' + id;
-  const sh = showSheet('<p class="dim">Loading details…</p>', { onClose: () => { infoSheet = null; } });
-  infoSheet = { k, sh };
+  if (!sh) { sh = showSheet('<p class="dim">Loading details…</p>'); sh.hist = []; }
+  else { sh.el.innerHTML = infoBackHtml(sh) + '<p class="dim">Loading details…</p>'; sh.el.parentElement.scrollTop = 0; }
+  sh.k = k;
   if (!MI[k]) {
     try {
-      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings,external_ids,watch/providers' })
-        : await tmdb(`/movie/${id}`, { append_to_response: 'credits,release_dates,watch/providers' });
-    } catch (e) { problem(type === 'tv' ? 'Show details' : 'Movie details', e); if (infoSheet && infoSheet.sh === sh) closeSheet(); return; }
+      MI[k] = type === 'tv' ? await tmdb(`/tv/${id}`, { append_to_response: 'aggregate_credits,content_ratings,external_ids,watch/providers,recommendations,similar' })
+        : await tmdb(`/movie/${id}`, { append_to_response: 'credits,release_dates,watch/providers,recommendations,similar' });
+    } catch (e) { problem(type === 'tv' ? 'Show details' : 'Movie details', e); if (sheetStack.includes(sh) && sh.k === k) { if (sh.hist.length) ACT.infoBack(sh.el); else { sheetStack.splice(sheetStack.indexOf(sh), 1); sheetStack.push(sh); closeSheet(); } } return; }
   }
-  const paint = () => { if (infoSheet && infoSheet.sh === sh) sh.el.innerHTML = type === 'tv' ? showInfoHtml(MI[k]) : movieInfoHtml(MI[k]); };
+  const paint = () => paintInfo(sh, k);
   paint();
   // a title from search or a person page isn't cached: look up its scores once, kept in memory only
   const d = MI[k];
@@ -1337,6 +1368,48 @@ async function openInfo(type, id) {
     catch (e) { problem('Ratings', e); }
     d._rLoading = false;
   }
+}
+function paintInfo(sh, k) {
+  if (!sheetStack.includes(sh) || sh.k !== k || !MI[k]) return;
+  sh.el.innerHTML = infoBackHtml(sh) + (k.startsWith('tv:') ? showInfoHtml(MI[k]) : movieInfoHtml(MI[k]));
+}
+const sheetOf = el => sheetStack.find(x => x.wrap.contains(el));
+function infoBackHtml(sh) {
+  const prev = sh.hist && sh.hist[sh.hist.length - 1]; if (!prev) return '';
+  const d = MI[prev]; return `<button class="infoback" data-act="infoBack">‹ ${esc(d ? d.name || d.title : 'Back')}</button>`;
+}
+/* "+ Add" on a details sheet for a title that isn't in the list yet */
+function infoAddHtml(d, tv) {
+  const p = prof(); if (!p) return '';
+  const inList = (tv ? p.shows : p.movies).some(x => x.id === d.id);
+  return inList ? `<div class="mi-inl">✓ In your ${tv ? 'Shows' : 'Movies'}</div>` : `<button class="btn sm mi-add" data-act="infoAdd">+ Add to ${tv ? 'Shows' : 'Movies'}</button>`;
+}
+/* "More like this": TMDB recommendations, topped up with similar titles */
+function simHtml(d, type) {
+  const seen = new Set([type + ':' + d.id]), out = [];
+  for (const x of [...((d.recommendations && d.recommendations.results) || []), ...((d.similar && d.similar.results) || [])]) {
+    const t = x.media_type || type; if ((t !== 'tv' && t !== 'movie') || x.adult || !x.poster_path) continue;
+    const key = t + ':' + x.id; if (seen.has(key)) continue; seen.add(key); out.push(Object.assign({}, x, { media_type: t }));
+    if (out.length >= 12) break;
+  }
+  if (!out.length) return '';
+  const p = prof();
+  return `<div class="mi-h">More like this</div><div class="sim">${out.map(x => {
+    const tv = x.media_type === 'tv', inList = p && (tv ? p.shows : p.movies).some(i => i.id === x.id);
+    return `<button class="sp" data-act="simInfo" data-type="${x.media_type}" data-id="${x.id}">${posterHtml(x.poster_path, nameOf(x), 'w185')}<b>${esc(nameOf(x))}</b><small>${esc(yearOf(x))}${inList ? ' · ✓ In list' : ''}</small></button>`;
+  }).join('')}</div>`;
+}
+/* Movies not on a service yet: where to rent or buy now, or when rent/buy opens */
+function rentBuyHtml(d) {
+  const pv = rawProv(d['watch/providers'], true), t = today(), dt = usDates(d.release_dates);
+  const rent = storeNames(pv.rent), buy = storeNames(pv.buy), list = n => esc(n.slice(0, 4).join(', ') + (n.length > 4 ? ' and more' : ''));
+  const lines = [];
+  if (rent.length) lines.push(`<b>Rent now</b> on ${list(rent)}`);
+  if (buy.length) lines.push(`<b>Buy now</b> on ${list(buy)}`);
+  if (!rent.length && !buy.length && dt.dig && dt.dig > t) lines.push(`<b>Rent/buy</b> from ${fmtDate(dt.dig, false)}`);
+  else if (!rent.length && buy.length) lines.push('<span class="dim">Rent not available yet</span>');
+  if (!lines.length && dt.th && dt.th > t) lines.push(`<b>In theaters</b> ${fmtDate(dt.th, false)}`);
+  return lines.length ? `<div class="mi-line mi-rb">${lines.join('<br>')}</div>` : '';
 }
 /* scores and streaming for a details sheet: the cached list entry if there is one, else what the sheet fetched */
 const infoRatings = (d, c) => (c.type ? c.ratings : d._r) || {};
@@ -1372,7 +1445,7 @@ const castHtml = list => list.length ? `<div class="mi-h">Top billed cast</div><
 const peopleLinks = list => list.map(p => `<button class="plink" data-act="person" data-id="${+p.id}">${esc(p.name)}</button>`).join(', ');
 const MUSIC_JOBS = /^(original music composer|music|composer|main title theme composer|original series composer)$/i;
 const uniqPeople = list => { const seen = new Set(); return list.filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id)); };
-const provHtml = prov => `<div class="mi-h">Streaming</div>` + (prov.length ? `<div class="mi-prov">${prov.map(p => `<span>${p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</div>` : '<div class="mi-line dim">Not on a subscription or free service right now</div>');
+const provHtml = (prov, extra) => `<div class="mi-h">Streaming</div>` + (prov.length ? `<div class="mi-prov">${prov.map(p => `<span>${p.l ? `<img src="${IMG}w92${esc(p.l)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</div>` : '<div class="mi-line dim">Not on a subscription, library or free service right now</div>' + (extra || ''));
 function showInfoHtml(d) {
   const c = C['tv:' + d.id] || {};
   const cr = ((d.content_ratings && d.content_ratings.results) || []).find(r => r.iso_3166_1 === REGION);
@@ -1400,7 +1473,8 @@ function showInfoHtml(d) {
   const nx = d.next_episode_to_air;
   const next = nx && nx.air_date ? `Next: S${nx.season_number}E${nx.episode_number}${nx.name && !/^Episode \d+$/.test(nx.name) ? ` “${esc(nx.name)}”` : ''} · ${fmtDate(nx.air_date)}` : (!ended ? 'Next episode date not announced' : '');
   return `<div class="mi-top">${posterHtml(d.poster_path, d.name)}<div><h2>${esc(d.name)}</h2>
-      <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}${counts ? `<br>${counts}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}</div></div>
+      <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}${counts ? `<br>${counts}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}${infoAddHtml(d, true)}</div></div>
+    ${provHtml(infoProviders(d, c))}
     ${d.tagline ? `<p class="tagline">${esc(d.tagline)}</p>` : ''}
     <p class="mi-ov">${d.overview ? esc(d.overview) : '<span class="dim">No synopsis available yet.</span>'}</p>
     <div class="mi-h">Status</div><div class="mi-line">${esc(status)}${next ? `<br><span class="dim">${next}</span>` : ''}</div>
@@ -1408,8 +1482,8 @@ function showInfoHtml(d) {
     ${creators.length ? `<div class="mi-h">Created by</div><div class="mi-line">${peopleLinks(creators)}</div>` : ''}
     ${music.length ? `<div class="mi-h">Music</div><div class="mi-line">${peopleLinks(music)}</div>` : ''}
     ${castHtml(cast)}
-    ${provHtml(infoProviders(d, c))}
-    ${parentsGuideHtml(cert, tvDesc, (d.external_ids && d.external_ids.imdb_id) || c.imdb, d.name)}`;
+    ${parentsGuideHtml(cert, tvDesc, (d.external_ids && d.external_ids.imdb_id) || c.imdb, d.name)}
+    ${simHtml(d, 'tv')}`;
 }
 function movieInfoHtml(d) {
   const c = C['movie:' + d.id] || {};
@@ -1428,10 +1502,11 @@ function movieInfoHtml(d) {
   const facts = [year, cert ? `<span class="cert">${esc(cert)}</span>` : '', fmtRun(d.runtime)].filter(Boolean).join(' · ');
   const rate = rateHtml(infoRatings(d, c));
   const dt = usDates(d.release_dates), t = today();
-  const rel = [dt.th ? `Theaters ${fmtDate(dt.th, false)}` : (d.release_date ? `Released ${fmtDate(d.release_date, false)}` : ''), dt.dig ? `Digital ${fmtDate(dt.dig, false)}` : ''].filter(Boolean).join(' · ');
+  const rel = [dt.th ? `Theaters ${fmtDate(dt.th, false)}` : (d.release_date ? `Released ${fmtDate(d.release_date, false)}` : ''), dt.dig ? `Rent/buy ${fmtDate(dt.dig, false)}` : ''].filter(Boolean).join(' · ');
   const prov = infoProviders(d, c);
   return `<div class="mi-top">${posterHtml(d.poster_path, d.title)}<div><h2>${esc(d.title)}</h2>
-      <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}</div></div>
+      <div class="mi-facts">${facts}${genres ? `<br>${esc(genres)}` : ''}</div>${rate ? `<div class="mi-rate">${rate}</div>` : ''}${infoAddHtml(d, false)}</div></div>
+    ${provHtml(prov, rentBuyHtml(d))}
     ${d.tagline ? `<p class="tagline">${esc(d.tagline)}</p>` : ''}
     <p class="mi-ov">${d.overview ? esc(d.overview) : '<span class="dim">No synopsis available yet.</span>'}</p>
     ${directors.length ? `<div class="mi-h">Director${directors.length > 1 ? 's' : ''}</div><div class="mi-line">${peopleLinks(directors)}</div>` : ''}
@@ -1439,8 +1514,8 @@ function movieInfoHtml(d) {
     ${music.length ? `<div class="mi-h">Music</div><div class="mi-line">${peopleLinks(music)}</div>` : ''}
     ${castHtml(cast.map(p => ({ id: p.id, name: p.name, img: p.profile_path, role: p.character })))}
     ${rel ? `<div class="mi-h">Release</div><div class="mi-line">${rel}</div>` : ''}
-    ${provHtml(prov)}
-    ${parentsGuideHtml(cert, mDesc, d.imdb_id || c.imdb, d.title)}`;
+    ${parentsGuideHtml(cert, mDesc, d.imdb_id || c.imdb, d.title)}
+    ${simHtml(d, 'movie')}`;
 }
 
 /* ---------- search / add ----------
@@ -1881,12 +1956,21 @@ const ACT = {
   archive() { openArchive(); },
   seenList() { openSeen(); },
   closeAll() { closeAll(); },
+  simInfo(b) { const sh = sheetOf(b); if (!sh) return; sh.hist.push(sh.k); return openInfo(b.dataset.type, b.dataset.id, sh); },
+  infoBack(b) { const sh = sheetOf(b); if (!sh || !sh.hist.length) return; const [type, id] = sh.hist.pop().split(':'); return openInfo(type, id, sh); },
+  infoAdd(b) {
+    const sh = sheetOf(b), d = sh && MI[sh.k]; if (!d) return;
+    const tv = sh.k.startsWith('tv:');
+    const r = { media_type: tv ? 'tv' : 'movie', id: d.id, name: d.name, title: d.title, poster_path: d.poster_path, first_air_date: d.first_air_date, release_date: d.release_date };
+    const done = addResult(r, true); paintInfo(sh, sh.k); return done;
+  },
   reorderProf() { openProfOrder(); },
   resInfo(b) { return openInfo(b.dataset.type, b.dataset.id); },
   addRes(b) { const r = RES[+b.dataset.i]; if (r) return addResult(r, !!b.dataset.stay); },
   person(b) {
     // from a details sheet: close it, open the person, and bring the sheet back on Back
-    if (b.closest('.sheet-wrap') && infoSheet) { const [type, id] = infoSheet.k.split(':'); while (sheetStack.length) closeSheet(); return openPerson(b.dataset.id, () => openInfo(type, id)); }
+    const sh = sheetOf(b);
+    if (sh && sh.k) { const [type, id] = sh.k.split(':'); while (sheetStack.length) closeSheet(); return openPerson(b.dataset.id, () => openInfo(type, id)); }
     return openPerson(b.dataset.id);
   },
   franchise(b) { return openFranchise(b.dataset.id); },
